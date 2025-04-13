@@ -1,2 +1,7 @@
 .env
 streamlit_env/
+/logs
+/analytics
+/kafka/analytics_consumer.log
+/kafka/csv_log_consumer.log
+/kafka/db_log_consumer.log

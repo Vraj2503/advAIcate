@@ -1,5 +1,6 @@
 import streamlit as st
 from prompt_utils import usecase_prompt
+from session_utils import (get_conversation_id, get_client_ip, calculate_session_duration, detect_query_type)
 import os
 from dotenv import load_dotenv
 from groq import Groq # type: ignore
@@ -10,12 +11,68 @@ import PyPDF2
 import docx
 import requests
 import chromadb
+from PIL import Image
+import pytesseract
 
 load_dotenv()
 
+import csv
+from datetime import datetime
+from kafka import KafkaProducer
+import json
+
+# Function to set up Kafka producer
+def setup_kafka_producer():
+    return KafkaProducer(
+        bootstrap_servers=['localhost:9092'],
+        value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+        retries=5  # Add retry logic for reliability
+    )
+
+# Replace your current logging function with this
+def log_user_query(user_input: str, ai_response: str):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Create log data structure with all relevant information
+    log_data = {
+        "timestamp": timestamp,
+        "user_input": user_input,
+        "ai_response": ai_response,
+        "conversation_id": get_conversation_id(),  # Implement this function to track conversations
+        "metadata": {
+            "client_ip": get_client_ip(),  # For analytics, if applicable
+            "session_duration": calculate_session_duration(),  # Track how long the conversation has been going
+            "query_type": detect_query_type(user_input)  # Categorize the type of legal query
+        }
+    }
+    
+    try:
+        # Send to Kafka topic
+        producer = setup_kafka_producer()
+        producer.send('legal_chatbot_logs', log_data)
+        producer.flush()
+        # Optional: log success to application logs
+        print(f"Successfully sent log to Kafka at {timestamp}")
+    except Exception as e:
+        # For error handling, fallback to direct CSV if Kafka fails
+        print(f"Error sending to Kafka: {str(e)}. Falling back to CSV logging.")
+        fallback_csv_logging(log_data)
+
+LOG_FILE = "user_queries_log.csv"
+
+# Fallback function in case Kafka is down
+def fallback_csv_logging(log_data):
+    with open(LOG_FILE, mode="a", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file, quoting=csv.QUOTE_ALL)
+        writer.writerow([
+            log_data["timestamp"],
+            log_data["user_input"].replace("\n", "\\n").replace("\r", ""),
+            log_data["ai_response"].replace("\n", "\\n").replace("\r", "")
+        ])
+
 # ChromaDB & Cloudflare setup
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
-collection = chroma_client.get_collection(name="constitution_embeddings")
+collection = chroma_client.get_or_create_collection(name="constitution_embeddings")
 
 def get_embedding(text):
     model = "@cf/baai/bge-large-en-v1.5"
@@ -191,15 +248,18 @@ def handle_user_input(client):
         st.session_state.conversation_history.append(
             {"role": "user", "content": user_message}
         )
-        
+
         with st.spinner("AI is thinking..."):
             ai_response = fetch_ai_response(client, st.session_state.conversation_history)
-            
+
         if ai_response:
             st.session_state.conversation_history.append(
                 {"role": "assistant", "content": ai_response}
             )
-        
+
+            # ✅ Log the query and response
+            log_user_query(user_message, ai_response)
+
         # Clear the input after submitting
         st.session_state.user_input = ""
 
@@ -221,7 +281,7 @@ def process_uploaded_file(uploaded_file):
     return "Unsupported file type."
 
 def extract_text_from_image(uploaded_file):
-    image = Image.open(image_path)
+    image = Image.open(uploaded_file)
     text = pytesseract.image_to_string(image)
     return text
 
@@ -280,15 +340,18 @@ def main():
             st.session_state.conversation_history.append(
                 {"role": "user", "content": extracted_text}
             )
-            
+
             with st.spinner("AI is analyzing the document..."):
                 ai_response = fetch_ai_response(client, st.session_state.conversation_history)
-        
+
             if ai_response:
                 st.session_state.conversation_history.append(
                     {"role": "assistant", "content": ai_response}
                 )
 
+                # ✅ Log this document interaction too
+                log_user_query(extracted_text, ai_response)
 
 if __name__ == "__main__":
     main()
+    
