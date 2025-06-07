@@ -1,29 +1,63 @@
-# Legal Chatbot
+# ADVAICATE
 
-A cutting-edge AI-powered chatbot designed to assist users with legal queries. The chatbot leverages natural language processing (NLP) and machine learning techniques to provide users with relevant legal information and guidance.
+*Empowering legal insights through intelligent conversation.*
 
-## Features
+[![Last Commit](https://img.shields.io/github/last-commit/Vraj2503/advAIcate?label=last%20commit)]() 
+[![Python](https://img.shields.io/badge/python-100%25-blue)]() 
+[![Languages](https://img.shields.io/github/languages/count/Vraj2503/advAIcate)]()
 
-- **Instant Legal Assistance**: Get quick answers to your legal questions.
-- **User-Friendly Interface**: Easy-to-use, conversational interface for seamless interactions.
-- **Customizable Responses**: Tailored to provide information on various legal topics.
-- **Multilingual Support**: Ability to respond in multiple languages.
-- **Continuous Learning**: Regular updates and improvements to ensure accuracy and relevance.
+_Built with the tools and technologies:_
 
-## Tech Stack
+[![JSON](https://img.shields.io/badge/JSON-automated-lightgrey)]() 
+[![Markdown](https://img.shields.io/badge/Markdown-formatted-lightgrey)]() 
+[![Docker](https://img.shields.io/badge/Docker-enabled-blue)]() 
+[![Python](https://img.shields.io/badge/Python-core-blue)]()
 
-- **Backend**: Python
-- **Libraries**: 
-  - [spaCy](https://spacy.io/) for Natural Language Processing
-  - [Transformers](https://huggingface.co/transformers/) for pre-trained language models
-  - [FastAPI](https://fastapi.tiangolo.com/) for the backend API
-- **Database**: SQLite or PostgreSQL (optional for storing conversation history)
-- **AI/ML**: TensorFlow or PyTorch for training machine learning models
+---
 
-## Installation
+## Table of Contents
 
-Follow these steps to get the chatbot up and running on your local machine.
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Testing](#testing)
+- [Return to Top](#return-to-top)
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Vraj2503/Legal-Chatbot.git
+---
+
+## Overview
+
+**advAIcate** is an innovative AI-driven legal chatbot designed to streamline legal inquiries and provide users with instant access to legal information.
+
+### Why advAIcate?
+
+This project empowers users to navigate legal complexities effortlessly. The core features include:
+
+- 🤖 **Interactive Chatbot** – Engage in real-time conversations and upload legal documents for analysis.
+- 📊 **Session Management** – Maintain context with unique conversation identifiers.
+- 📑 **AI Legal Assistant** – Access automated legal advice, document generation, and compliance support.
+- 📈 **Real-time Analytics** – Gain insights into interactions and improve performance.
+- 🔐 **Kafka Integration** – Enable reliable event logging and interaction history.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Python** (>= 3.8)
+- **Conda** (for managing the environment)
+- **Docker** (optional, for containerized setup)
+
+---
+
+### Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Vraj2503/advAIcate
