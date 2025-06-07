@@ -61,9 +61,10 @@ Clone the repository:
 
 ```bash
 git clone https://github.com/Vraj2503/advAIcate
-
+```
 
 Navigate to the Project Repository:
 
 ```bash
 cd advAIcate
+```
