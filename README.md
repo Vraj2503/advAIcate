@@ -70,6 +70,7 @@ cd advAIcate
 ```
 
 3. Install the Dependencies:
+   
    Using [Docker](https://www.docker.com/):
    ```bash
    docker build -t Vraj2503/adVIcate
