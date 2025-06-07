@@ -70,22 +70,23 @@ cd advAIcate
 ```
 
 3. Install the Dependencies:
-   Using Docker(https://www.docker.com/):
+   Using [Docker](https://www.docker.com/):
    ```bash
    docker build -t Vraj2503/adVIcate
    ```
-   Using Conda(https://anaconda.org/anaconda/conda):
+   Using [Conda](https://anaconda.org/anaconda/conda):
    conda env create -f conda.yml
 
 ### Usage
 
 Run the project with:
 
-Using Docker(https://www.docker.com/):
+Using [Docker](https://www.docker.com/):
 ```bash
 docker run -it {image_name}
+```
 
-Using Conda(https://anaconda.org/anaconda/conda):
+Using [Conda](https://anaconda.org/anaconda/conda):
 ```bash
 conda activate {venv}
 python {entrypoint}
