@@ -2,58 +2,41 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import logging
-import warnings
 from dotenv import load_dotenv
-
-# LangChain / Groq imports
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage
-from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s: %(message)s'
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(name)
 
-# Load environment variables
 load_dotenv()
 
-# Suppress warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+app = Flask(name)
 
-# LangChain / Groq environment setup
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
-os.environ["LANGCHAIN_PROJECT"] = "advAIcate"
-
-if not os.getenv("LANGCHAIN_API_KEY"):
-    logger.warning("LANGCHAIN_API_KEY not set.")
-if not os.getenv("GROQ_API_KEY"):
-    logger.warning("GROQ_API_KEY not set.")
-
-# Initialize Flask app
-app = Flask(__name__)
-
-# CORS configuration
+# CORS configuration - be very explicit
 allowed_origins = [
     "http://localhost:3000",
-    "http://127.0.0.1:3000"
+    "http://127.0.0.1:3000",
+    "https://advaicate.onrender.com",
 ]
+
+# Add any additional origins from environment
 if os.getenv("ALLOWED_ORIGINS"):
     env_origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS").split(",")]
     allowed_origins.extend(env_origins)
 
 logger.info(f"Configured CORS origins: {allowed_origins}")
 
-CORS(app,
+# Configure CORS with explicit settings
+CORS(app, 
      origins=allowed_origins,
      methods=['GET', 'POST', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'],
      supports_credentials=True)
 
+# Add explicit OPTIONS handler for preflight requests
 @app.before_request
 def handle_preflight():
     if request.method == "OPTIONS":
@@ -64,29 +47,41 @@ def handle_preflight():
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
 
-# LangChain-based Groq model with memory (RAG)
-model = ChatGroq(
-    model="llama3-8b-8192",
-    temperature=0.7,
-    max_tokens=1000,
-)
+# Initialize Groq client with error handling
+groq_client = None
+try:
+    from groq import Groq
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        logger.error("GROQ_API_KEY environment variable not set")
+    else:
+        # Try different initialization approaches
+        try:
+            groq_client = Groq(api_key=api_key)
+            logger.info("Groq client initialized successfully with standard method")
+        except TypeError as e:
+            logger.warning(f"Standard initialization failed: {e}")
+            try:
+                # Alternative initialization without extra kwargs
+                groq_client = Groq(api_key=api_key)
+                logger.info("Groq client initialized with alternative method")
+            except Exception as e2:
+                logger.error(f"Alternative initialization also failed: {e2}")
+                groq_client = None
+except ImportError as e:
+    logger.error(f"Failed to import Groq: {e}")
+    groq_client = None
+except Exception as e:
+    logger.error(f"Unexpected error initializing Groq client: {e}")
+    groq_client = None
 
-store = {}
-def get_session_history(session_id: str) -> BaseChatMessageHistory:
-    if session_id not in store:
-        store[session_id] = InMemoryChatMessageHistory()
-    return store[session_id]
-
-model_with_memory = RunnableWithMessageHistory(model, get_session_history)
-
-# Routes
 @app.route('/', methods=['GET'])
 def root():
     return jsonify({
         'message': 'Legal Chatbot Backend API',
         'status': 'running',
         'port': os.getenv('PORT', '8000'),
-        'model_status': 'initialized',
+        'groq_status': 'initialized' if groq_client else 'failed',
         'endpoints': {
             'health': '/api/health',
             'chat': '/api/chat (POST)'
@@ -96,18 +91,20 @@ def root():
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
-        'status': 'healthy',
-        'langchain_enabled': True,
-        'groq_client': True,
+        'status': 'healthy' if groq_client else 'degraded',
+        'groq_client': groq_client is not None,
         'environment': os.getenv('FLASK_ENV', 'development'),
         'port': os.getenv('PORT', '8000'),
-        'groq_api_key_set': bool(os.getenv("GROQ_API_KEY")),
-        'langchain_api_key_set': bool(os.getenv("LANGCHAIN_API_KEY"))
+        'groq_api_key_set': bool(os.getenv("GROQ_API_KEY"))
     })
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:
+        if not groq_client:
+            logger.error("Groq client not initialized")
+            return jsonify({'error': 'AI service unavailable - Groq client not initialized'}), 503
+
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Invalid JSON data'}), 400
@@ -115,13 +112,12 @@ def chat():
         message = data.get('message', '').strip()
         uploaded_files = data.get('uploaded_files', [])
         user_id = data.get('user_id', 'anonymous')
-
+        
         if not message:
             return jsonify({'error': 'Message is required'}), 400
 
         logger.info(f"Chat request from user {user_id[:8] if len(user_id) > 8 else user_id}...")
-
-        # Contextual prompt
+        
         contextual_prompt = f"""You are a Legal AI Assistant. Provide helpful, accurate legal information while always emphasizing that your responses are for informational purposes only and not legal advice.
 
 User's question: {message}"""
@@ -131,16 +127,38 @@ User's question: {message}"""
             if file_names:
                 contextual_prompt += f"\n\nNote: The user has uploaded: {', '.join(file_names)}."
 
-        config = {"configurable": {"session_id": user_id}}
+        # Create chat completion
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are a helpful Legal AI Assistant, assisting Indian Residents. Provide informative responses about legal matters while always clarifying that this is general information only, not legal advice. 
 
-        response = model_with_memory.invoke(
-            [HumanMessage(content=contextual_prompt)], config=config
+IMPORTANT FORMATTING RULES:
+- Start with a brief introduction paragraph
+- Use clear section headings followed by a colon (:)
+- Under each section, use bullet points (•) for key information
+- Use numbered lists (1., 2., 3.) for step-by-step processes or categories
+- Keep bullet points concise and focused
+- Always end with a disclaimer paragraph
+
+Always recommend consulting with a qualified attorney for specific legal situations."""
+                },
+                {
+                    "role": "user",
+                    "content": contextual_prompt
+                }
+            ],
+            model="llama3-8b-8192",
+            temperature=0.7,
+            max_tokens=1000
         )
 
+        response_content = chat_completion.choices[0].message.content
         logger.info(f"Successfully generated response for user {user_id[:8] if len(user_id) > 8 else user_id}...")
 
         return jsonify({
-            'response': response.content,
+            'response': response_content,
             'model_used': 'llama3-8b-8192'
         })
 
@@ -159,9 +177,9 @@ def internal_error(error):
     logger.error(f"Internal server error: {error}")
     return jsonify({'error': 'Internal server error'}), 500
 
-if __name__ == '__main__':
+if name == 'main':
     port = int(os.getenv("PORT", 8000))
     debug = os.getenv("FLASK_ENV") == "development"
     logger.info(f"Starting server on port {port}")
-    logger.info(f"Groq + LangChain RAG model status: Ready")
+    logger.info(f"Groq client status: {'Ready' if groq_client else 'Not initialized'}")
     app.run(debug=debug, host="0.0.0.0", port=port)
