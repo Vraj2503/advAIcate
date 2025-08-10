@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 # CORS configuration - be very explicit
 allowed_origins = [
@@ -143,7 +143,7 @@ def not_found(error):
 def internal_error(error):
     return jsonify({"error": "Internal server error"}), 500
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     debug = os.getenv("FLASK_ENV") == "development"
     app.run(debug=debug, host="0.0.0.0", port=port)
