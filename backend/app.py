@@ -1,19 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
-import logging
 from dotenv import load_dotenv
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s: %(message)s'
-)
-logger = logging.getLogger(name)
 
 load_dotenv()
 
-app = Flask(name)
+app = Flask(_name_)
 
 # CORS configuration - be very explicit
 allowed_origins = [
@@ -27,24 +19,24 @@ if os.getenv("ALLOWED_ORIGINS"):
     env_origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS").split(",")]
     allowed_origins.extend(env_origins)
 
-logger.info(f"Configured CORS origins: {allowed_origins}")
-
 # Configure CORS with explicit settings
-CORS(app, 
-     origins=allowed_origins,
-     methods=['GET', 'POST', 'OPTIONS'],
-     allow_headers=['Content-Type', 'Authorization'],
-     supports_credentials=True)
+CORS(
+    app,
+    origins=allowed_origins,
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    supports_credentials=True,
+)
 
 # Add explicit OPTIONS handler for preflight requests
 @app.before_request
 def handle_preflight():
     if request.method == "OPTIONS":
-        response = jsonify({'status': 'OK'})
-        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response = jsonify({"status": "OK"})
+        response.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin", "*"))
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        response.headers.add("Access-Control-Allow-Credentials", "true")
         return response
 
 # Initialize Groq client with error handling
@@ -52,78 +44,63 @@ groq_client = None
 try:
     from groq import Groq
     api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        logger.error("GROQ_API_KEY environment variable not set")
-    else:
-        # Try different initialization approaches
+    if api_key:
         try:
             groq_client = Groq(api_key=api_key)
-            logger.info("Groq client initialized successfully with standard method")
-        except TypeError as e:
-            logger.warning(f"Standard initialization failed: {e}")
-            try:
-                # Alternative initialization without extra kwargs
-                groq_client = Groq(api_key=api_key)
-                logger.info("Groq client initialized with alternative method")
-            except Exception as e2:
-                logger.error(f"Alternative initialization also failed: {e2}")
-                groq_client = None
-except ImportError as e:
-    logger.error(f"Failed to import Groq: {e}")
-    groq_client = None
-except Exception as e:
-    logger.error(f"Unexpected error initializing Groq client: {e}")
+        except Exception:
+            groq_client = None
+    else:
+        groq_client = None
+except Exception:
     groq_client = None
 
-@app.route('/', methods=['GET'])
+@app.route("/", methods=["GET"])
 def root():
-    return jsonify({
-        'message': 'Legal Chatbot Backend API',
-        'status': 'running',
-        'port': os.getenv('PORT', '8000'),
-        'groq_status': 'initialized' if groq_client else 'failed',
-        'endpoints': {
-            'health': '/api/health',
-            'chat': '/api/chat (POST)'
+    return jsonify(
+        {
+            "message": "Legal Chatbot Backend API",
+            "status": "running",
+            "port": os.getenv("PORT", "8000"),
+            "groq_status": "initialized" if groq_client else "failed",
+            "endpoints": {"health": "/api/health", "chat": "/api/chat (POST)"},
         }
-    })
+    )
 
-@app.route('/api/health', methods=['GET'])
+@app.route("/api/health", methods=["GET"])
 def health():
-    return jsonify({
-        'status': 'healthy' if groq_client else 'degraded',
-        'groq_client': groq_client is not None,
-        'environment': os.getenv('FLASK_ENV', 'development'),
-        'port': os.getenv('PORT', '8000'),
-        'groq_api_key_set': bool(os.getenv("GROQ_API_KEY"))
-    })
+    return jsonify(
+        {
+            "status": "healthy" if groq_client else "degraded",
+            "groq_client": groq_client is not None,
+            "environment": os.getenv("FLASK_ENV", "development"),
+            "port": os.getenv("PORT", "8000"),
+            "groq_api_key_set": bool(os.getenv("GROQ_API_KEY")),
+        }
+    )
 
-@app.route('/api/chat', methods=['POST'])
+@app.route("/api/chat", methods=["POST"])
 def chat():
     try:
         if not groq_client:
-            logger.error("Groq client not initialized")
-            return jsonify({'error': 'AI service unavailable - Groq client not initialized'}), 503
+            return jsonify({"error": "AI service unavailable - Groq client not initialized"}), 503
 
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'Invalid JSON data'}), 400
+            return jsonify({"error": "Invalid JSON data"}), 400
 
-        message = data.get('message', '').strip()
-        uploaded_files = data.get('uploaded_files', [])
-        user_id = data.get('user_id', 'anonymous')
-        
+        message = data.get("message", "").strip()
+        uploaded_files = data.get("uploaded_files", [])
+        user_id = data.get("user_id", "anonymous")
+
         if not message:
-            return jsonify({'error': 'Message is required'}), 400
+            return jsonify({"error": "Message is required"}), 400
 
-        logger.info(f"Chat request from user {user_id[:8] if len(user_id) > 8 else user_id}...")
-        
         contextual_prompt = f"""You are a Legal AI Assistant. Provide helpful, accurate legal information while always emphasizing that your responses are for informational purposes only and not legal advice.
 
 User's question: {message}"""
 
         if uploaded_files:
-            file_names = [f['name'] for f in uploaded_files if 'name' in f]
+            file_names = [f.get("name") for f in uploaded_files if isinstance(f, dict) and f.get("name")]
             if file_names:
                 contextual_prompt += f"\n\nNote: The user has uploaded: {', '.join(file_names)}."
 
@@ -142,44 +119,31 @@ IMPORTANT FORMATTING RULES:
 - Keep bullet points concise and focused
 - Always end with a disclaimer paragraph
 
-Always recommend consulting with a qualified attorney for specific legal situations."""
+Always recommend consulting with a qualified attorney for specific legal situations.""",
                 },
-                {
-                    "role": "user",
-                    "content": contextual_prompt
-                }
+                {"role": "user", "content": contextual_prompt},
             ],
             model="llama3-8b-8192",
             temperature=0.7,
-            max_tokens=1000
+            max_tokens=1000,
         )
 
         response_content = chat_completion.choices[0].message.content
-        logger.info(f"Successfully generated response for user {user_id[:8] if len(user_id) > 8 else user_id}...")
 
-        return jsonify({
-            'response': response_content,
-            'model_used': 'llama3-8b-8192'
-        })
+        return jsonify({"response": response_content, "model_used": "llama3-8b-8192"})
 
     except Exception as e:
-        logger.error(f"Error in chat endpoint: {str(e)}")
-        return jsonify({
-            'error': f'An error occurred while processing your request: {str(e)}'
-        }), 500
+        return jsonify({"error": f"An error occurred while processing your request: {str(e)}"}), 500
 
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({'error': 'Endpoint not found'}), 404
+    return jsonify({"error": "Endpoint not found"}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    logger.error(f"Internal server error: {error}")
-    return jsonify({'error': 'Internal server error'}), 500
+    return jsonify({"error": "Internal server error"}), 500
 
-if name == 'main':
+if _name_ == "_main_":
     port = int(os.getenv("PORT", 8000))
     debug = os.getenv("FLASK_ENV") == "development"
-    logger.info(f"Starting server on port {port}")
-    logger.info(f"Groq client status: {'Ready' if groq_client else 'Not initialized'}")
     app.run(debug=debug, host="0.0.0.0", port=port)
