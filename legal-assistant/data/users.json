@@ -1,0 +1,20 @@
+[
+  {
+    "id": "115761945305437861894",
+    "name": "Soumitra Kumar",
+    "email": "kumarsoumitra2401@gmail.com",
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocL6k0PuHzvMM9NrQOh2SOY49YDQsaTLXEPCAco01PkYgHQJyAs=s96-c",
+    "provider": "google",
+    "createdAt": "2025-06-04T18:47:41.445Z",
+    "lastLogin": "2025-06-04T19:16:05.279Z"
+  },
+  {
+    "id": "104716096239215026337",
+    "name": "Soumitra Kumar",
+    "email": "soumitra.kce22@sot.pdpu.ac.in",
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocLB-DXqVx8WXWgwZDwqHwIY_RLq7dojj4jzBvwZnaLUO9sAloE=s96-c",
+    "provider": "google",
+    "createdAt": "2025-06-04T18:52:44.903Z",
+    "lastLogin": "2025-06-05T12:58:10.865Z"
+  }
+]
