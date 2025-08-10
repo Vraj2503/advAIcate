@@ -22,22 +22,32 @@ if os.getenv("ALLOWED_ORIGINS"):
 # Configure CORS with explicit settings
 CORS(
     app,
-    origins=allowed_origins,
-    methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    resources={r"/*": {"origins": allowed_origins}},
     supports_credentials=True,
+    methods=["GET", "POST", "OPTIONS"],
 )
 
-# Add explicit OPTIONS handler for preflight requests
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        response = jsonify({"status": "OK"})
-        response.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin", "*"))
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-        response.headers.add("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
-        response.headers.add("Access-Control-Allow-Credentials", "true")
-        return response
+# Add CORS headers to every response (incl. errors and OPTIONS)
+@app.after_request
+def add_cors_headers(resp):
+    origin = request.headers.get("Origin")
+    norm = lambda u: u.rstrip("/") if isinstance(u, str) else u
+    if origin and norm(origin) in [norm(o) for o in allowed_origins]:
+        req_headers = request.headers.get(
+            "Access-Control-Request-Headers", "Content-Type,Authorization"
+        )
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Vary"] = "Origin"
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = req_headers
+        resp.headers["Access-Control-Max-Age"] = "86400"
+    return resp
+
+# Explicit preflight endpoint (optional but safe)
+@app.route("/api/chat", methods=["OPTIONS"])
+def chat_preflight():
+    return ("", 204)
 
 # Initialize Groq client with error handling
 groq_client = None
