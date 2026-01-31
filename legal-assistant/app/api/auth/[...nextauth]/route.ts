@@ -98,6 +98,21 @@ export const authOptions: NextAuthOptions = {
             return false;
           }
 
+          // Fetch the Supabase user ID after upsert
+          const { data: supabaseUser, error: fetchError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', user.email)
+            .single();
+
+          if (fetchError || !supabaseUser) {
+            console.error('Error fetching Supabase user ID:', fetchError);
+            return false;
+          }
+
+          // Update the user object with Supabase ID
+          user.id = supabaseUser.id;
+
           return true;
         } catch (error: unknown) {
           console.error('Error during Google sign-in:', error);

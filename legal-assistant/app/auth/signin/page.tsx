@@ -44,8 +44,7 @@ function SignInForm() {
     }
   }, [router, searchParams]);
 
-  const 
-  handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setError(null);
     try {
