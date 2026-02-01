@@ -73,9 +73,14 @@ const Chat = () => {
         },
         body: JSON.stringify({
           message,
-          uploaded_files: uploadedFiles.map(file => ({ name: file.name, size: file.size })),
-          user_id: session.user.id
-        }),
+          uploaded_files: uploadedFiles.map(file => ({
+            name: file.name,
+            size: file.size
+          })),
+          user_id: session.user.id,
+          user_email: session.user.email,
+      }),
+
       });
 
       console.log('Response status:', response.status); // Debug log
