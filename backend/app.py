@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -5,23 +8,12 @@ from dotenv import load_dotenv
 
 from supabase_client import get_supabase_manager
 from rag_pipeline import get_rag_pipeline
-
-load_dotenv()
+from auth import require_auth
 
 app = Flask(__name__)
 
-"""
-AUTHENTICATION DESIGN NOTE
---------------------------
-• NextAuth handles authentication (frontend)
-• Backend TRUSTS user identity sent from frontend
-• Supabase is used ONLY as a datastore (service role)
-• RLS is preserved and bypassed correctly server-side
-"""
-
-# ----------------------------
 # CORS CONFIGURATION
-# ----------------------------
+
 
 allowed_origins = [
     "http://localhost:3000",
@@ -95,26 +87,11 @@ supabase = get_supabase_manager()
 rag_pipeline = get_rag_pipeline()
 
 # ----------------------------
-# HELPERS
-# ----------------------------
-
-def get_authenticated_user(data: dict):
-    user_id = data.get("user_id")
-    user_email = data.get("user_email")
-
-    if not user_id or not user_email:
-        return None
-
-    return {
-        "id": user_id,
-        "email": user_email,
-    }
-
-# ----------------------------
 # ROUTES
 # ----------------------------
 
 @app.route("/api/upload", methods=["POST"])
+@require_auth
 def upload_document():
     """Upload and process a document"""
     try:
@@ -126,13 +103,8 @@ def upload_document():
         if file.filename == '':
             return jsonify({"error": "No file selected"}), 400
         
-        # Get user info from form data
-        user_id = request.form.get('user_id')
-        user_email = request.form.get('user_email')
+        user_id = request.user["id"]
         session_id = request.form.get('session_id')
-        
-        if not user_id or not user_email:
-            return jsonify({"error": "Unauthorized"}), 401
         
         # Create session if not provided
         if not session_id:
@@ -174,6 +146,7 @@ def upload_document():
         }), 500
 
 @app.route("/api/chat", methods=["POST"])
+@require_auth
 def chat():
     try:
         if not groq_client:
@@ -183,9 +156,7 @@ def chat():
         if not data:
             return jsonify({"error": "Invalid JSON"}), 400
 
-        user = get_authenticated_user(data)
-        if not user:
-            return jsonify({"error": "Unauthorized"}), 401
+        user = request.user
 
         message = data.get("message", "").strip()
         uploaded_files = data.get("uploaded_files", [])
@@ -295,6 +266,7 @@ User question:
         }), 500
 
 @app.route("/api/session/end", methods=["POST"])
+@require_auth
 def end_session():
     """End a session and generate conversation summary"""
     try:
@@ -302,9 +274,7 @@ def end_session():
         if not data:
             return jsonify({"error": "Invalid JSON"}), 400
         
-        user = get_authenticated_user(data)
-        if not user:
-            return jsonify({"error": "Unauthorized"}), 401
+        user = request.user
         
         session_id = data.get("session_id")
         if not session_id:
@@ -409,20 +379,11 @@ def end_session():
         }), 500
 
 @app.route("/api/sessions", methods=["GET", "POST"])
+@require_auth
 def get_sessions():
     """Get user's sessions (active or completed)"""
     try:
-        # Get user from query params or request body
-        if request.method == "GET":
-            user_id = request.args.get("user_id")
-            user_email = request.args.get("user_email")
-        else:
-            data = request.get_json()
-            user_id = data.get("user_id")
-            user_email = data.get("user_email")
-        
-        if not user_id or not user_email:
-            return jsonify({"error": "Unauthorized"}), 401
+        user_id = request.user["id"]
         
         status = request.args.get("status", "all")  # 'all', 'active', 'completed'
         

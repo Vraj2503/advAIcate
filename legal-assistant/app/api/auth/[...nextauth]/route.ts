@@ -5,10 +5,34 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { NextAuthOptions } from "next-auth";
 
-// Initialize Supabase client
+// Initialize Supabase client (service role for DB operations)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Initialize Supabase public client (for Auth operations)
+const supabasePublic = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// Helper to get or create Supabase Auth user using Admin API
+async function getOrCreateSupabaseAuthUser(email: string) {
+  // Check if auth user already exists
+  const { data: existingUsers } = await supabase.auth.admin.listUsers();
+
+  const existing = existingUsers?.users?.find(u => u.email === email);
+  if (existing) return existing;
+
+  // Create auth user
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    email_confirm: true,
+  });
+
+  if (error) throw error;
+  return data.user;
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -62,11 +86,23 @@ export const authOptions: NextAuthOptions = {
             .update({ last_login: new Date().toISOString() })
             .eq('id', user.id);
 
+          // Authenticate with Supabase Auth to get access token
+          const { data: authData, error: authError } = await supabasePublic.auth.signInWithPassword({
+            email: user.email,
+            password: credentials.password,
+          });
+
+          if (authError || !authData.session) {
+            console.error("Supabase auth login failed:", authError);
+            return null;
+          }
+
           return {
             id: user.id,
             email: user.email,
             name: user.name,
             image: user.image,
+            supabaseAccessToken: authData.session.access_token,
           };
         } catch (error) {
           console.error('Auth error:', error);
@@ -113,6 +149,38 @@ export const authOptions: NextAuthOptions = {
           // Update the user object with Supabase ID
           user.id = supabaseUser.id;
 
+          // 1. Get or create Supabase Auth user
+          const authUser = await getOrCreateSupabaseAuthUser(user.email);
+
+          // 2. Link to public.users
+          await supabase
+            .from("users")
+            .update({ auth_user_id: authUser.id })
+            .eq("id", supabaseUser.id);
+
+          // 3. Create a password for the auth user if missing
+          // (needed so we can create a session)
+          const tempPassword = crypto.randomUUID() + "!Aa1";
+
+          await supabase.auth.admin.updateUserById(authUser.id, {
+            password: tempPassword,
+          });
+
+          // 4. Now sign in using public client to obtain a real JWT
+          const { data: loginData, error: loginError } =
+            await supabasePublic.auth.signInWithPassword({
+              email: user.email,
+              password: tempPassword,
+            });
+
+          if (loginError || !loginData.session) {
+            console.error("Failed to create Supabase session:", loginError);
+            return false;
+          }
+
+          // 5. Attach access token
+          (user as any).supabaseAccessToken = loginData.session.access_token;
+
           return true;
         } catch (error: unknown) {
           console.error('Error during Google sign-in:', error);
@@ -124,12 +192,16 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
         token.id = user.id;
+        if ((user as any).supabaseAccessToken) {
+          token.supabaseAccessToken = (user as any).supabaseAccessToken;
+        }
       }
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
       if (token) {
         session.user.id = token.id;
+        session.supabaseAccessToken = token.supabaseAccessToken;
       }
       return session;
     },
