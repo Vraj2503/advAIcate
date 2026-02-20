@@ -72,8 +72,6 @@ const Chat = () => {
       for (const file of files) {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("user_id", session?.user?.id || "");
-        formData.append("user_email", session?.user?.email || "");
         if (sessionId) {
           formData.append("session_id", sessionId);
         }
@@ -149,8 +147,6 @@ const Chat = () => {
             name: file.name,
             size: file.size
           })),
-          user_id: session.user.id,
-          user_email: session.user.email,
           session_id: sessionId,
       }),
 

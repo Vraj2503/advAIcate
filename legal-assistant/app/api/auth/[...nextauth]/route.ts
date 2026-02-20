@@ -1,243 +1,77 @@
 import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { createClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
+import { createClient } from "@supabase/supabase-js";
 import { NextAuthOptions } from "next-auth";
 
-// Initialize Supabase client (service role for DB operations)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-// Initialize Supabase public client (for Auth operations)
-const supabasePublic = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-// Helper to get or create Supabase Auth user using Admin API
-async function getOrCreateSupabaseAuthUser(email: string) {
-  // Check if auth user already exists
-  const { data: existingUsers } = await supabase.auth.admin.listUsers();
-
-  const existing = existingUsers?.users?.find(u => u.email === email);
-  if (existing) return existing;
-
-  // Create auth user
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    email_confirm: true,
-  });
-
-  if (error) throw error;
-  return data.user;
-}
+// ─── NextAuth is ONLY a session mirror ───────────────────────
+// Supabase handles all authentication.
+// This CredentialsProvider simply verifies a Supabase access_token
+// and copies the identity into a NextAuth JWT session.
+// ──────────────────────────────────────────────────────────────
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code"
-        }
-      }
-    }),
     CredentialsProvider({
-      name: "credentials",
+      name: "SupabaseBridge",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        access_token: { label: "Access Token", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+        if (!credentials?.access_token) return null;
 
-        try {
-          // Check user in custom users table
-          const { data: user, error } = await supabase
-            .from('users')
-            .select('id, email, name, password, image')
-            .eq('email', credentials.email)
-            .eq('provider', 'email')
-            .single();
+        // Verify the Supabase token
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
 
-          if (error || !user || !user.password) {
-            console.error('User not found or no password:', error);
-            return null;
-          }
+        const { data, error } = await supabase.auth.getUser(
+          credentials.access_token
+        );
 
-          // Verify password
-          const isValidPassword = await bcrypt.compare(credentials.password, user.password);
-          
-          if (!isValidPassword) {
-            console.error('Invalid password');
-            return null;
-          }
+        if (error || !data?.user) return null;
 
-          // Update last login
-          await supabase
-            .from('users')
-            .update({ last_login: new Date().toISOString() })
-            .eq('id', user.id);
-
-          // Authenticate with Supabase Auth to get access token
-          const { data: authData, error: authError } = await supabasePublic.auth.signInWithPassword({
-            email: user.email,
-            password: credentials.password,
-          });
-
-          if (authError || !authData.session) {
-            console.error("Supabase auth login failed:", authError);
-            return null;
-          }
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: user.image,
-            supabaseAccessToken: authData.session.access_token,
-          };
-        } catch (error) {
-          console.error('Auth error:', error);
-          return null;
-        }
-      }
+        return {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.name || data.user.email,
+          image: data.user.user_metadata?.avatar_url || null,
+          supabaseAccessToken: credentials.access_token,
+        };
+      },
     }),
   ],
   callbacks: {
-    async signIn({ user, account }: { user: any; account: any }) {
-      if (account?.provider === "google" && user?.email) {
-        try {
-          // Handle Google sign-in sync
-          const { error: dbError } = await supabase
-            .from('users')
-            .upsert({
-              name: user.name,
-              email: user.email,
-              image: user.image,
-              provider: 'google',
-              email_verified: new Date().toISOString(),
-              last_login: new Date().toISOString(),
-            }, {
-              onConflict: 'email'
-            });
-
-          if (dbError) {
-            console.error('Error syncing Google user:', dbError);
-            return false;
-          }
-
-          // Fetch the Supabase user ID after upsert
-          const { data: supabaseUser, error: fetchError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-          if (fetchError || !supabaseUser) {
-            console.error('Error fetching Supabase user ID:', fetchError);
-            return false;
-          }
-
-          // Update the user object with Supabase ID
-          user.id = supabaseUser.id;
-
-          // 1. Get or create Supabase Auth user
-          const authUser = await getOrCreateSupabaseAuthUser(user.email);
-
-          // 2. Link to public.users
-          await supabase
-            .from("users")
-            .update({ auth_user_id: authUser.id })
-            .eq("id", supabaseUser.id);
-
-          // 3. Create a password for the auth user if missing
-          // (needed so we can create a session)
-          const tempPassword = crypto.randomUUID() + "!Aa1";
-
-          await supabase.auth.admin.updateUserById(authUser.id, {
-            password: tempPassword,
-          });
-
-          // 4. Now sign in using public client to obtain a real JWT
-          const { data: loginData, error: loginError } =
-            await supabasePublic.auth.signInWithPassword({
-              email: user.email,
-              password: tempPassword,
-            });
-
-          if (loginError || !loginData.session) {
-            console.error("Failed to create Supabase session:", loginError);
-            return false;
-          }
-
-          // 5. Attach access token
-          (user as any).supabaseAccessToken = loginData.session.access_token;
-
-          return true;
-        } catch (error: unknown) {
-          console.error('Error during Google sign-in:', error);
-          return false;
-        }
-      }
-      return true;
-    },
     async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
-        token.id = user.id;
-        if ((user as any).supabaseAccessToken) {
-          token.supabaseAccessToken = (user as any).supabaseAccessToken;
-        }
+        token.sub = user.id;
+        token.supabaseAccessToken = (user as any).supabaseAccessToken;
       }
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
       if (token) {
-        session.user.id = token.id;
+        session.user.id = token.sub;
         session.supabaseAccessToken = token.supabaseAccessToken;
       }
       return session;
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-      // Handle redirects properly for production
-      console.log('Redirect called with:', { url, baseUrl });
-      
-      // If it's a relative URL, make it absolute with baseUrl
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      }
-      
-      // If it's the same origin, allow it
-      if (url.startsWith(baseUrl)) {
-        return url;
-      }
-      
-      // For production deployment
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith(baseUrl)) return url;
       const productionUrl = process.env.NEXTAUTH_URL;
-      if (productionUrl && url.startsWith(productionUrl)) {
-        return url;
-      }
-      
-      // Default fallback
+      if (productionUrl && url.startsWith(productionUrl)) return url;
       return baseUrl;
-    }
+    },
   },
   pages: {
     signIn: "/auth/signin",
-    // Remove signUp as it's not a valid NextAuth page option
-    // signUp: "/auth/signup", // This line causes the error
   },
   session: {
     strategy: "jwt" as const,
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // In NextAuth v4 set NEXTAUTH_URL env var to trust the host in production
 };
 
 const handler = NextAuth(authOptions);

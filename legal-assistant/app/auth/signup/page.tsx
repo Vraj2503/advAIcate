@@ -2,86 +2,48 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Scale, Zap, Eye, EyeOff, Mail } from "lucide-react";
+import { Scale, Zap, Mail } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
 import ThemeToggle from "../../components/ThemeToggle";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function SignUp() {
-  const [form, setForm] = useState({ 
-    username: "", 
-    email: "", 
-    password: "", 
-    confirmPassword: "" 
-  });
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"details" | "verification">("details");
+  const [form, setForm] = useState({ username: "", email: "" });
+  const [step, setStep] = useState<"details" | "sent">("details");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  
+
   const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
   const { theme } = useTheme();
   const isLight = theme === "light";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send OTP");
-
-      setStep("verification");
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
+  /* ── Send magic-link via Supabase ── */
+  const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          token: otp,
-          username: form.username,
-          password: form.password, // Pass the password here
-        }),
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: form.email,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: window.location.origin + "/auth/callback",
+          data: { username: form.username, name: form.username, password_set: false },
+        },
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Invalid OTP");
+      if (otpError) throw otpError;
 
-      router.push("/auth/signin?message=Account created successfully");
+      setStep("sent");
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Failed to send magic link");
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +105,7 @@ export default function SignUp() {
             <h1 className={`text-2xl font-light mb-2 ${
               isLight ? "text-slate-900" : "text-slate-100"
             }`}>
-              {step === "details" ? "Create Account" : "Verify Your Email"}
+              {step === "details" ? "Create Account" : "Check Your Email"}
             </h1>
             
             <p className={`text-sm ${
@@ -151,7 +113,7 @@ export default function SignUp() {
             }`}>
               {step === "details" 
                 ? "Join thousands using AI for legal guidance"
-                : `Enter the 6-digit code sent to ${form.email}`
+                : `We sent a magic link to ${form.email}`
               }
             </p>
           </div>
@@ -160,7 +122,7 @@ export default function SignUp() {
           {step === "details" ? (
             <>
               {/* Registration Form */}
-              <form onSubmit={handleSendOTP} className="space-y-4">
+              <form onSubmit={handleSendMagicLink} className="space-y-4">
                 <input
                   type="text"
                   name="username"
@@ -180,48 +142,6 @@ export default function SignUp() {
                   required
                   className={inputClass}
                 />
-                
-                {/* Password Input */}
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    placeholder="Password"
-                    value={form.password}
-                    onChange={handleChange}
-                    required
-                    minLength={6}
-                    className={inputClass}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                {/* Confirm Password Input */}
-                <div className="relative">
-                  <input
-                    type={showConfirm ? "text" : "password"}
-                    name="confirmPassword"
-                    placeholder="Confirm password"
-                    value={form.confirmPassword}
-                    onChange={handleChange}
-                    required
-                    minLength={6}
-                    className={inputClass}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                  >
-                    {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
 
                 {error && (
                   <div className="text-red-500 text-xs text-center bg-red-50 dark:bg-red-950/20 p-2 rounded">
@@ -238,7 +158,7 @@ export default function SignUp() {
                       : "bg-blue-600 hover:bg-blue-700"
                   } text-white disabled:opacity-50`}
                 >
-                  {isLoading ? "Sending OTP..." : "Send Verification Code"}
+                  {isLoading ? "Sending link..." : "Send Magic Link"}
                 </Button>
               </form>
 
@@ -251,7 +171,7 @@ export default function SignUp() {
 
               {/* Google Sign Up */}
               <Button
-                onClick={() => signIn("google", { callbackUrl: "/" })}
+                onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin + "/auth/callback" } })}
                 disabled={isLoading}
                 className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                   isLight
@@ -285,71 +205,31 @@ export default function SignUp() {
             </>
           ) : (
             <>
-              {/* OTP Verification Form */}
-              <form onSubmit={handleVerifyOTP} className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Enter 6-digit code"
-                    value={otp}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '');
-                      if (value.length <= 6) setOtp(value);
-                    }}
-                    required
-                    maxLength={6}
-                    className={`${inputClass} text-center text-lg tracking-widest font-mono`}
-                  />
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              {/* Magic link sent confirmation */}
+              <div className="text-center space-y-4">
+                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
+                  isLight ? "bg-orange-100" : "bg-orange-950/40"
+                }`}>
+                  <Mail className={`w-8 h-8 ${isLight ? "text-orange-600" : "text-orange-400"}`} />
                 </div>
 
-                {error && (
-                  <div className="text-red-500 text-xs text-center bg-red-50 dark:bg-red-950/20 p-2 rounded">
-                    {error}
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  disabled={isLoading || otp.length !== 6}
-                  className={`w-full py-3 rounded-xl font-medium transition-all ${
-                    isLight 
-                      ? "bg-orange-600 hover:bg-orange-700" 
-                      : "bg-blue-600 hover:bg-blue-700"
-                  } text-white disabled:opacity-50`}
-                >
-                  {isLoading ? "Verifying..." : "Verify & Create Account"}
-                </Button>
+                <p className={`text-sm ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                  We sent a magic link to <strong>{form.email}</strong>. Click
+                  the link in your inbox to continue.
+                </p>
 
                 <button
-                  type="button"
                   onClick={() => {
                     setStep("details");
-                    setOtp("");
                     setError(null);
                   }}
-                  className={`w-full text-sm transition-colors ${
-                    isLight 
-                      ? "text-slate-600 hover:text-orange-600" 
+                  className={`text-sm transition-colors ${
+                    isLight
+                      ? "text-slate-600 hover:text-orange-600"
                       : "text-slate-400 hover:text-orange-400"
                   }`}
                 >
                   ← Back to details
-                </button>
-              </form>
-
-              {/* Resend OTP */}
-              <div className="text-center mt-4">
-                <button
-                  onClick={() => handleSendOTP({ preventDefault: () => {} } as React.FormEvent)}
-                  disabled={isLoading}
-                  className={`text-xs transition-colors ${
-                    isLight 
-                      ? "text-slate-500 hover:text-orange-600" 
-                      : "text-slate-400 hover:text-orange-400"
-                  } disabled:opacity-50`}
-                >
-                  Didn't receive code? Resend
                 </button>
               </div>
             </>

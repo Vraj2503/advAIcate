@@ -7,6 +7,7 @@ import { Scale, Zap, Mail, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "../../contexts/ThemeContext";
 import ThemeToggle from "../../components/ThemeToggle";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 // Loading component for Suspense fallback
 function SignInLoading() {
@@ -26,6 +27,7 @@ function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
 
@@ -48,11 +50,14 @@ function SignInForm() {
     setIsGoogleLoading(true);
     setError(null);
     try {
-      await signIn('google', { callbackUrl: '/chat' });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin + "/auth/callback" },
+      });
+      if (error) throw error;
     } catch (error: unknown) {
       console.error('Sign in error:', error);
       setError('Failed to sign in with Google');
-    } finally {
       setIsGoogleLoading(false);
     }
   };
@@ -63,27 +68,34 @@ function SignInForm() {
     setError(null);
 
     try {
-      console.log('Attempting sign in with:', { email: form.email });
-      
-      const result = await signIn('credentials', {
-        email: form.email,
-        password: form.password,
+      // 1. Authenticate with Supabase
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
+        });
+
+      if (authError || !authData.session) {
+        setError("Invalid email or password");
+        return;
+      }
+
+      // 2. Bridge into NextAuth session
+      const result = await signIn("credentials", {
+        access_token: authData.session.access_token,
         redirect: false,
       });
 
-      console.log('Sign in result:', result);
-
       if (result?.error) {
-        setError('Invalid email or password');
+        setError("Invalid email or password");
       } else if (result?.ok) {
-        console.log('Sign in successful, redirecting...');
-        router.push('/chat');
+        router.push("/chat");
       } else {
-        setError('An unexpected error occurred');
+        setError("An unexpected error occurred");
       }
     } catch (error: unknown) {
-      console.error('Email sign in error:', error);
-      setError('An error occurred during sign in');
+      console.error("Email sign in error:", error);
+      setError("An error occurred during sign in");
     } finally {
       setIsLoading(false);
     }
