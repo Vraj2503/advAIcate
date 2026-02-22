@@ -10,15 +10,19 @@ SUPABASE_JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
 SUPABASE_AUDIENCE = "authenticated"
 
 _jwks_cache = None
+_jwks_cache_time = 0
+JWKS_CACHE_TTL = 3600  # Refresh JWKS keys every hour
 
 SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 
-def get_jwks():
-    global _jwks_cache
-    if _jwks_cache is None:
+def get_jwks(force_refresh=False):
+    import time as _time
+    global _jwks_cache, _jwks_cache_time
+    if force_refresh or _jwks_cache is None or (_time.time() - _jwks_cache_time) > JWKS_CACHE_TTL:
         res = requests.get(SUPABASE_JWKS_URL, timeout=5)
         res.raise_for_status()
         _jwks_cache = res.json()
+        _jwks_cache_time = _time.time()
     return _jwks_cache
 
 
@@ -90,7 +94,13 @@ def require_auth(f):
         try:
             payload = verify_supabase_token(token)
         except Exception as e:
-            return jsonify({"error": "Invalid token", "details": str(e)}), 401
+            # Retry once with refreshed JWKS in case keys rotated
+            try:
+                global _jwks_cache
+                _jwks_cache = None
+                payload = verify_supabase_token(token)
+            except Exception as e2:
+                return jsonify({"error": "Invalid token", "details": str(e2)}), 401
 
         request.user = {
             "id": payload["sub"],

@@ -1,10 +1,12 @@
-import { getSession } from "next-auth/react";
+import { getSupabaseBrowserClient } from "./supabase";
 
 export async function apiFetch(
   url: string,
   options: RequestInit = {}
 ) {
-  const session = await getSession();
+  // Get a fresh token from the Supabase client (handles refresh automatically)
+  const supabase = getSupabaseBrowserClient();
+  const { data: { session } } = await supabase.auth.getSession();
 
   const headers: HeadersInit = {
     ...(options.headers || {}),
@@ -15,8 +17,8 @@ export async function apiFetch(
     (headers as Record<string, string>)["Content-Type"] = "application/json";
   }
 
-  if ((session as any)?.supabaseAccessToken) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${(session as any).supabaseAccessToken}`;
+  if (session?.access_token) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${session.access_token}`;
   }
 
   return fetch(url, {
