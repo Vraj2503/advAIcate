@@ -17,6 +17,8 @@ export async function apiFetch(
 
   if ((session as any)?.supabaseAccessToken) {
     (headers as Record<string, string>)["Authorization"] = `Bearer ${(session as any).supabaseAccessToken}`;
+  } else {
+    console.warn("[apiFetch] No supabaseAccessToken in session:", JSON.stringify(session, null, 2));
   }
 
   return fetch(url, {

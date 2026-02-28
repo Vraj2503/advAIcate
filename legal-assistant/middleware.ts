@@ -1,7 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Public routes that don't need Supabase session refresh
+const PUBLIC_ROUTES = ["/", "/aboutus", "/contactus", "/auth/signin", "/auth/signup"];
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip Supabase auth check for public pages — just pass through
+  if (PUBLIC_ROUTES.some((route) => pathname === route)) {
+    return NextResponse.next();
+  }
+
+  // Skip if there are no Supabase auth cookies at all (anonymous visitor)
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-"));
+  if (!hasAuthCookie) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -29,10 +47,11 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Do NOT run any code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake like this could make it
-  // very difficult to debug auth issues.
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Supabase unreachable — let the request continue without session refresh
+  }
 
   return supabaseResponse;
 }
