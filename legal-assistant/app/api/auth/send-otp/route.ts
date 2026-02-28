@@ -19,12 +19,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('email')
-      .eq('email', email)
-      .single();
+    // Check if user already exists in auth.users
+    const { data: { users: existingUsers } } = await supabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.find((u: any) => u.email === email);
 
     if (existingUser) {
       return NextResponse.json({ error: 'User already exists with this email' }, { status: 400 });

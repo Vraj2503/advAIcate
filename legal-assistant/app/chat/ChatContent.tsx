@@ -3,39 +3,34 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Scale } from "lucide-react";
 
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import Sidebar from "./components/Sidebar";
 import { ChatMessages } from "./components/Chat/ChatMessages";
 import { ChatInput } from "./components/Chat/ChatInput";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useTheme } from "../contexts/ThemeContext";
 import { Message } from "./types/chat";
-
-/* ==================== COMPONENT ==================== */
+import { apiFetch } from "@/lib/api";
 
 const Chat = () => {
   const router = useRouter();
   const { theme } = useTheme();
   const { data: session, status } = useSession();
+  const isLight = theme === "light";
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const hasRedirected = useRef(false);
-  
   const loadingAuth = status === "loading";
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "bot",
-      content: "Hello! I'm your Legal AI Assistant. How can I assist you today?",
-      timestamp: new Date().toLocaleTimeString(),
-    },
-  ]);
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatTitle, setChatTitle] = useState<string | null>(null);
 
-  const { uploadedFiles, handleFileUpload, removeFile } = useFileUpload({
+  const hasMessages = messages.length > 0;
+
+  const { uploadedFiles, handleFileUpload, removeFile, clearFiles } = useFileUpload({
     onSuccess: () => {},
     onError: () => {},
   });
@@ -71,17 +66,12 @@ const Chat = () => {
       for (const file of files) {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("user_id", session?.user?.id || "");
-        formData.append("user_email", session?.user?.email || "");
         if (sessionId) {
           formData.append("session_id", sessionId);
         }
 
-        const uploadResponse = await fetch(`${apiUrl}/api/upload`, {
+        const uploadResponse = await apiFetch(`${apiUrl}/api/upload`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.user?.email}`,
-          },
           body: formData,
         });
 
@@ -92,12 +82,9 @@ const Chat = () => {
           return false;
         }
 
-        // Store session_id from first upload
         if (uploadData.session_id && !sessionId) {
           setSessionId(uploadData.session_id);
         }
-
-        console.log(`Successfully uploaded ${file.name}:`, uploadData);
       }
 
       return true;
@@ -129,37 +116,45 @@ const Chat = () => {
       }
     }
 
+    // Set chat title from first message
+    if (!chatTitle) {
+      const title = message.length > 50 ? message.substring(0, 50) + "…" : message;
+      setChatTitle(title);
+    }
+
+    // Capture attached files before clearing
+    const attachedFiles = uploadedFiles.map((f) => ({ name: f.name, size: f.size }));
+
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
       content: message,
       timestamp: new Date().toLocaleTimeString(),
+      files: attachedFiles.length > 0 ? attachedFiles : undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setIsTyping(true);
 
+    // Clear file previews from the input bar now that they're attached to the message
+    if (attachedFiles.length > 0) {
+      clearFiles();
+    }
+
     try {
       const apiUrl =
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-      const response = await fetch(`${apiUrl}/api/chat`, {
+      const response = await apiFetch(`${apiUrl}/api/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.email}`,
-        },
         body: JSON.stringify({
           message,
-          uploaded_files: uploadedFiles.map(file => ({
+          uploaded_files: uploadedFiles.map((file) => ({
             name: file.name,
-            size: file.size
+            size: file.size,
           })),
-          user_id: session.user.id,
-          user_email: session.user.email,
           session_id: sessionId,
-      }),
-
+        }),
       });
 
       const data = await response.json();
@@ -179,7 +174,7 @@ const Chat = () => {
           isAnimating: true,
         },
       ]);
-    } catch (err) {
+    } catch {
       setIsTyping(false);
       setMessages((prev) => [
         ...prev,
@@ -210,66 +205,155 @@ const Chat = () => {
     }
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setChatTitle(null);
+    setSessionId(null);
+    setSidebarOpen(false);
+  };
+
   /* ==================== LOADING ==================== */
 
   if (loadingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading chat…</p>
+      <div className={`h-screen flex items-center justify-center ${
+        isLight
+          ? "bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50"
+          : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
+      }`}>
+        <div className={`w-10 h-10 border-3 rounded-full animate-spin ${
+          isLight
+            ? "border-orange-200 border-t-orange-600"
+            : "border-slate-700 border-t-blue-500"
+        }`} />
       </div>
     );
   }
 
   if (!session) return null;
 
-  const bgClass = `min-h-screen flex flex-col ${
-    theme === "light"
-      ? "bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50"
-      : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
-  }`;
+  /* ==================== RENDER ==================== */
 
   return (
-    <div className={bgClass}>
-      <Header isChat />
+    <div className={`h-screen flex flex-col overflow-hidden ${
+      isLight
+        ? "bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50"
+        : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
+    }`}>
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        chatTitle={chatTitle}
+        onNewChat={handleNewChat}
+      />
 
-      <div className="flex-1 container mx-auto px-4 py-3 max-w-5xl">
-        <div className={`rounded-xl shadow-lg flex flex-col h-[600px] chat-scrollbar-minimal border ${
-          theme === "light"
-            ? "bg-white border-gray-200"
-            : "bg-slate-800/90 border-slate-700"
-        }`}>
-          <ChatMessages
-            ref={chatContainerRef}
-            messages={messages}
-            isTyping={isTyping}
-            onAnimationComplete={handleAnimationComplete}
-            onCharacterAdded={handleCharacterAdded}
-          />
-          <ChatInput
-            onSendMessage={handleSendMessage}
-            onFileUpload={handleFileUpload}
-            uploadedFiles={uploadedFiles}
-            onRemoveFile={removeFile}
-            isTyping={isTyping}
-          />
-        </div>
-
-        <div className={`mt-6 p-4 rounded-lg border ${
-          theme === "light"
-            ? "bg-amber-50 border-amber-200"
-            : "bg-slate-800/80 border-slate-700"
-        }`}>
-          <p className={`text-sm ${
-            theme === "light" ? "text-amber-800" : "text-amber-300"
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Top bar with chat title */}
+        {hasMessages && (
+          <div className={`flex items-center justify-center py-3 px-4 flex-shrink-0 ${
+            isLight ? "border-b border-slate-100" : "border-b border-slate-800"
           }`}>
-            <strong>Disclaimer:</strong> This AI assistant provides general
-            information only and is not legal advice. Consult a qualified
-            attorney for legal matters.
-          </p>
-        </div>
-      </div>
+            {/* Spacer for sidebar toggle */}
+            <div className="w-10" />
+            <h1 className={`text-sm font-medium truncate max-w-md text-center flex-1 ${
+              isLight ? "text-slate-600" : "text-slate-400"
+            }`}>
+              {chatTitle || "New Chat"}
+            </h1>
+            <div className="w-10" />
+          </div>
+        )}
 
-      <Footer />
+        {/* Chat area: centered when empty, full-page when active */}
+        {!hasMessages ? (
+          /* ========== EMPTY STATE — centered like Claude ========== */
+          <div className="flex-1 flex flex-col items-center justify-center px-4">
+            <div className="max-w-2xl w-full text-center mb-8">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 ${
+                isLight
+                  ? "bg-gradient-to-br from-orange-100 to-amber-100"
+                  : "bg-gradient-to-br from-slate-700 to-slate-600"
+              }`}>
+                <Scale className={`w-7 h-7 ${
+                  isLight ? "text-orange-600" : "text-orange-400"
+                }`} />
+              </div>
+              <h1 className={`text-3xl sm:text-4xl font-light mb-3 ${
+                isLight ? "text-slate-900" : "text-slate-100"
+              }`}>
+                What can I help with?
+              </h1>
+              <p className={`text-base font-light ${
+                isLight ? "text-slate-500" : "text-slate-400"
+              }`}>
+                Ask me anything about legal matters — contracts, compliance, case law, and more.
+              </p>
+            </div>
+
+            {/* Centered input */}
+            <div className="w-full max-w-2xl">
+              <ChatInput
+                onSendMessage={handleSendMessage}
+                onFileUpload={handleFileUpload}
+                uploadedFiles={uploadedFiles}
+                onRemoveFile={removeFile}
+                isTyping={isTyping}
+                centered
+              />
+            </div>
+
+            {/* Suggestion chips */}
+            <div className="flex flex-wrap justify-center gap-2 mt-6 max-w-2xl">
+              {[
+                "Review my contract terms",
+                "Explain tenant rights",
+                "What is fair use?",
+                "Help draft an NDA",
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => handleSendMessage(suggestion)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    isLight
+                      ? "bg-white border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-700 hover:bg-orange-50 shadow-sm"
+                      : "bg-slate-800 border border-slate-700 text-slate-300 hover:border-slate-600 hover:text-slate-100 hover:bg-slate-700/80"
+                  }`}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+
+            <p className={`text-xs mt-8 ${
+              isLight ? "text-slate-400" : "text-slate-500"
+            }`}>
+              This AI provides general information only — not legal advice.
+            </p>
+          </div>
+        ) : (
+          /* ========== ACTIVE CHAT — full page ========== */
+          <>
+            <ChatMessages
+              ref={chatContainerRef}
+              messages={messages}
+              isTyping={isTyping}
+              onAnimationComplete={handleAnimationComplete}
+              onCharacterAdded={handleCharacterAdded}
+            />
+            <div className="flex-shrink-0">
+              <ChatInput
+                onSendMessage={handleSendMessage}
+                onFileUpload={handleFileUpload}
+                uploadedFiles={uploadedFiles}
+                onRemoveFile={removeFile}
+                isTyping={isTyping}
+              />
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,171 +1,105 @@
 import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { createClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
+import { createClient } from "@supabase/supabase-js";
 import { NextAuthOptions } from "next-auth";
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// ─── NextAuth is ONLY a session mirror ───────────────────────
+// Supabase handles all authentication.
+// This CredentialsProvider simply verifies a Supabase access_token
+// and copies the identity into a NextAuth JWT session.
+// ──────────────────────────────────────────────────────────────
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code"
-        }
-      }
-    }),
     CredentialsProvider({
-      name: "credentials",
+      name: "SupabaseBridge",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        access_token: { label: "Access Token", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+        if (!credentials?.access_token) return null;
 
-        try {
-          // Check user in custom users table
-          const { data: user, error } = await supabase
-            .from('users')
-            .select('id, email, name, password, image')
-            .eq('email', credentials.email)
-            .eq('provider', 'email')
-            .single();
+        // Verify the Supabase token
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
 
-          if (error || !user || !user.password) {
-            console.error('User not found or no password:', error);
-            return null;
-          }
+        const { data, error } = await supabase.auth.getUser(
+          credentials.access_token
+        );
 
-          // Verify password
-          const isValidPassword = await bcrypt.compare(credentials.password, user.password);
-          
-          if (!isValidPassword) {
-            console.error('Invalid password');
-            return null;
-          }
+        if (error || !data?.user) return null;
 
-          // Update last login
-          await supabase
-            .from('users')
-            .update({ last_login: new Date().toISOString() })
-            .eq('id', user.id);
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: user.image,
-          };
-        } catch (error) {
-          console.error('Auth error:', error);
-          return null;
-        }
-      }
+        return {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.name || data.user.email,
+          image: data.user.user_metadata?.avatar_url || null,
+          supabaseAccessToken: credentials.access_token,
+        };
+      },
     }),
   ],
   callbacks: {
-    async signIn({ user, account }: { user: any; account: any }) {
-      if (account?.provider === "google" && user?.email) {
-        try {
-          // Handle Google sign-in sync
-          const { error: dbError } = await supabase
-            .from('users')
-            .upsert({
-              name: user.name,
-              email: user.email,
-              image: user.image,
-              provider: 'google',
-              email_verified: new Date().toISOString(),
-              last_login: new Date().toISOString(),
-            }, {
-              onConflict: 'email'
-            });
-
-          if (dbError) {
-            console.error('Error syncing Google user:', dbError);
-            return false;
-          }
-
-          // Fetch the Supabase user ID after upsert
-          const { data: supabaseUser, error: fetchError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-          if (fetchError || !supabaseUser) {
-            console.error('Error fetching Supabase user ID:', fetchError);
-            return false;
-          }
-
-          // Update the user object with Supabase ID
-          user.id = supabaseUser.id;
-
-          return true;
-        } catch (error: unknown) {
-          console.error('Error during Google sign-in:', error);
-          return false;
-        }
-      }
-      return true;
-    },
     async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
-        token.id = user.id;
+        token.sub = user.id;
+        token.supabaseAccessToken = (user as any).supabaseAccessToken;
       }
+
+      // Refresh the Supabase token if it's about to expire
+      // Supabase tokens last ~1 hour; refresh when within 5 min of expiry
+      if (token.supabaseAccessToken) {
+        try {
+          // Decode JWT payload to check expiration (no verification needed here)
+          const payload = JSON.parse(
+            Buffer.from(token.supabaseAccessToken.split(".")[1], "base64").toString()
+          );
+          const expiresAt = payload.exp * 1000; // convert to ms
+          const fiveMinutes = 5 * 60 * 1000;
+
+          if (Date.now() > expiresAt - fiveMinutes) {
+            // Token is expired or about to expire — try to refresh
+            const supabase = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            );
+            const { data, error } = await supabase.auth.refreshSession();
+            if (!error && data.session) {
+              token.supabaseAccessToken = data.session.access_token;
+            }
+          }
+        } catch {
+          // If refresh fails, keep the existing token and let backend return 401
+        }
+      }
+
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
       if (token) {
-        session.user.id = token.id;
+        session.user.id = token.sub;
+        session.supabaseAccessToken = token.supabaseAccessToken;
       }
       return session;
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-      // Handle redirects properly for production
-      console.log('Redirect called with:', { url, baseUrl });
-      
-      // If it's a relative URL, make it absolute with baseUrl
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      }
-      
-      // If it's the same origin, allow it
-      if (url.startsWith(baseUrl)) {
-        return url;
-      }
-      
-      // For production deployment
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith(baseUrl)) return url;
       const productionUrl = process.env.NEXTAUTH_URL;
-      if (productionUrl && url.startsWith(productionUrl)) {
-        return url;
-      }
-      
-      // Default fallback
+      if (productionUrl && url.startsWith(productionUrl)) return url;
       return baseUrl;
-    }
+    },
   },
   pages: {
     signIn: "/auth/signin",
-    // Remove signUp as it's not a valid NextAuth page option
-    // signUp: "/auth/signup", // This line causes the error
   },
   session: {
     strategy: "jwt" as const,
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // In NextAuth v4 set NEXTAUTH_URL env var to trust the host in production
 };
 
 const handler = NextAuth(authOptions);

@@ -47,10 +47,10 @@ const Header = ({ isChat = false }: HeaderProps) => {
             </div>
           ) : (
             <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
-              <Link href="/aboutus" className={`transition-colors text-sm lg:text-base font-medium ${isLight ? 'text-slate-700 hover:text-orange-600' : 'text-white hover:text-orange-500'}`}>
+              <Link href="/aboutus" prefetch={true} className={`transition-colors text-sm lg:text-base font-medium ${isLight ? 'text-slate-700 hover:text-orange-600' : 'text-white hover:text-orange-500'}`}>
                 About
               </Link>
-              <Link href="/contactus" className={`transition-colors text-sm lg:text-base font-medium ${isLight ? 'text-slate-700 hover:text-orange-600' : 'text-white hover:text-orange-500'}`}>
+              <Link href="/contactus" prefetch={true} className={`transition-colors text-sm lg:text-base font-medium ${isLight ? 'text-slate-700 hover:text-orange-600' : 'text-white hover:text-orange-500'}`}>
                 Contact
               </Link>
             </div>
@@ -84,7 +84,7 @@ const Header = ({ isChat = false }: HeaderProps) => {
                   </span>
                 </div>
                 {!isChat && (
-                  <Link href="/chat">
+                  <Link href="/chat" prefetch={true}>
                     <Button size="sm" className={`text-white font-medium text-xs lg:text-sm border-0 ${isLight ? 'bg-orange-600 hover:bg-orange-700' : 'bg-transparent border-1 border-amber-600 hover:bg-gradient-to-r hover:from-orange-700 hover:to-amber-600'}`}>
                       Chat
                     </Button>
@@ -101,12 +101,12 @@ const Header = ({ isChat = false }: HeaderProps) => {
               </div>
             ) : (
               <div className="flex items-center space-x-2 lg:space-x-3">
-                <Link href="/auth/signin">
+                <Link href="/auth/signin" prefetch={true}>
                   <Button variant="ghost" size="sm" className={`text-xs lg:text-sm`}>
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/chat">
+                <Link href="/chat" prefetch={true}>
                   <Button size="sm" className={`text-white font-medium text-xs lg:text-sm border-0 ${isLight ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
                     Get Started
                   </Button>

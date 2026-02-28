@@ -53,9 +53,14 @@ export const useFileUpload = ({ onSuccess, onError }: UseFileUploadProps) => {
     onSuccess('File Removed', `"${fileName}" has been removed.`);
   };
 
+  const clearFiles = () => {
+    setUploadedFiles([]);
+  };
+
   return {
     uploadedFiles,
     handleFileUpload,
-    removeFile
+    removeFile,
+    clearFiles,
   };
 };
