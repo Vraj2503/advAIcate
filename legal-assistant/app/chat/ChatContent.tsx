@@ -11,6 +11,7 @@ import { ChatInput } from "./components/Chat/ChatInput";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useTheme } from "../contexts/ThemeContext";
 import { Message } from "./types/chat";
+import { apiFetch } from "@/lib/api";
 
 /* ==================== COMPONENT ==================== */
 
@@ -71,17 +72,12 @@ const Chat = () => {
       for (const file of files) {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("user_id", session?.user?.id || "");
-        formData.append("user_email", session?.user?.email || "");
         if (sessionId) {
           formData.append("session_id", sessionId);
         }
 
-        const uploadResponse = await fetch(`${apiUrl}/api/upload`, {
+        const uploadResponse = await apiFetch(`${apiUrl}/api/upload`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.user?.email}`,
-          },
           body: formData,
         });
 
@@ -143,20 +139,14 @@ const Chat = () => {
       const apiUrl =
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-      const response = await fetch(`${apiUrl}/api/chat`, {
+      const response = await apiFetch(`${apiUrl}/api/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.email}`,
-        },
         body: JSON.stringify({
           message,
           uploaded_files: uploadedFiles.map(file => ({
             name: file.name,
             size: file.size
           })),
-          user_id: session.user.id,
-          user_email: session.user.email,
           session_id: sessionId,
       }),
 
