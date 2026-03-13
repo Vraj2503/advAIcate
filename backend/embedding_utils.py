@@ -1,27 +1,22 @@
 """
 Embedding Generation Utilities
 Handles text embeddings for RAG and semantic search
-Using transformers library directly for better compatibility with Gemma
 """
+import logging
 import torch
 from transformers import AutoTokenizer, AutoModel
 import numpy as np
 from typing import List, Union
-import os
+
+from config import EMBEDDING_MODEL, EMBEDDING_MAX_LENGTH, EMBEDDING_DEFAULT_DIM
+
+logger = logging.getLogger(__name__)
 
 class EmbeddingGenerator:
     """Generate embeddings for text using transformers directly"""
     
-    def __init__(self, model_name: str = "BAAI/bge-base-en-v1.5"):
-        """
-
-        Initialize the embedding generator
-        
-        Args:
-            model_name: HuggingFace model name for embeddings
-                       Default: BAAI/bge-base-en-v1.5
-        """
-        self.model_name = model_name
+    def __init__(self, model_name: str = None):
+        self.model_name = model_name or EMBEDDING_MODEL
         self.model = None
         self.tokenizer = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -30,9 +25,8 @@ class EmbeddingGenerator:
     def _load_model(self):
         """Load the model using transformers"""
         try:
-            print(f"Loading embedding model '{self.model_name}' on {self.device}...")
+            logger.info("Loading embedding model '%s' on %s...", self.model_name, self.device)
 
-            # IMPORTANT: Force authenticated loading
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
                 use_auth_token=True
@@ -46,14 +40,10 @@ class EmbeddingGenerator:
             self.model.to(self.device)
             self.model.eval()
 
-            print(f"✓ Embedding model '{self.model_name}' loaded successfully on {self.device}")
+            logger.info("Embedding model '%s' loaded successfully on %s", self.model_name, self.device)
 
         except Exception as e:
-            print(f"✗ Error loading embedding model: {e}")
-            print("   This usually means:")
-            print("   1. Hugging Face token is not visible to transformers")
-            print("   2. Internet access is blocked")
-            print("   3. Model access was not granted")
+            logger.error("Error loading embedding model: %s", e)
             self.model = None
             self.tokenizer = None
 
@@ -87,7 +77,7 @@ class EmbeddingGenerator:
             text,
             padding=True,
             truncation=True,
-            max_length=512,
+            max_length=EMBEDDING_MAX_LENGTH,
             return_tensors='pt'
         ).to(self.device)
         
@@ -125,7 +115,7 @@ class EmbeddingGenerator:
             texts,
             padding=True,
             truncation=True,
-            max_length=512,
+            max_length=EMBEDDING_MAX_LENGTH,
             return_tensors='pt'
         ).to(self.device)
         
@@ -148,9 +138,8 @@ class EmbeddingGenerator:
             self._load_model()
         
         if self.model:
-            # Get the hidden size from model config
             return self.model.config.hidden_size
-        return 768  # Default fallback
+        return EMBEDDING_DEFAULT_DIM
 
 
 # Global instance

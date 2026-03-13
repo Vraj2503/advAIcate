@@ -2,9 +2,13 @@
 Conversation Summarization Utilities
 Generates summaries of conversation history using LLM
 """
+import logging
 from typing import List, Dict, Any, Optional
 from groq import Groq
-import os
+
+from config import GROQ_MODEL, GROQ_SUMMARY_TEMPERATURE, GROQ_TITLE_MAX_LENGTH, SUMMARY_MAX_TOKENS, GROQ_API_KEY
+
+logger = logging.getLogger(__name__)
 
 class ConversationSummarizer:
     """Generate summaries of conversations"""
@@ -18,9 +22,8 @@ class ConversationSummarizer:
         """
         self.groq_client = groq_client
         if not self.groq_client:
-            api_key = os.getenv("GROQ_API_KEY")
-            if api_key:
-                self.groq_client = Groq(api_key=api_key)
+            if GROQ_API_KEY:
+                self.groq_client = Groq(api_key=GROQ_API_KEY)
     
     def summarize_conversation(
         self, 
@@ -46,13 +49,12 @@ class ConversationSummarizer:
         # Generate summary based on type
         if summary_type == "brief":
             prompt = self._get_brief_summary_prompt(conversation_text)
-            max_tokens = 200
         elif summary_type == "detailed":
             prompt = self._get_detailed_summary_prompt(conversation_text)
-            max_tokens = 500
         else:  # session
             prompt = self._get_session_summary_prompt(conversation_text)
-            max_tokens = 300
+
+        max_tokens = SUMMARY_MAX_TOKENS.get(summary_type, SUMMARY_MAX_TOKENS["session"])
         
         try:
             response = self.groq_client.chat.completions.create(
@@ -66,15 +68,15 @@ class ConversationSummarizer:
                         "content": prompt
                     }
                 ],
-                model="llama-3.1-8b-instant",
-                temperature=0.3,
+                model=GROQ_MODEL,
+                temperature=GROQ_SUMMARY_TEMPERATURE,
                 max_tokens=max_tokens
             )
             
             return response.choices[0].message.content.strip()
         
         except Exception as e:
-            print(f"Error generating summary with LLM: {e}")
+            logger.error("Error generating summary with LLM: %s", e)
             return self._fallback_summary(messages)
     
     def _format_messages(self, messages: List[Dict[str, Any]]) -> str:
@@ -152,8 +154,7 @@ Detailed Summary:"""
             A short title (max 60 characters)
         """
         if not self.groq_client:
-            # Fallback: take first N characters
-            return summary[:60] + "..." if len(summary) > 60 else summary
+            return summary[:GROQ_TITLE_MAX_LENGTH] + "..." if len(summary) > GROQ_TITLE_MAX_LENGTH else summary
         
         try:
             response = self.groq_client.chat.completions.create(
@@ -167,8 +168,8 @@ Detailed Summary:"""
                         "content": f"Generate a title for this conversation summary:\n\n{summary}"
                     }
                 ],
-                model="llama-3.1-8b-instant",
-                temperature=0.3,
+                model=GROQ_MODEL,
+                temperature=GROQ_SUMMARY_TEMPERATURE,
                 max_tokens=30
             )
             
@@ -177,11 +178,11 @@ Detailed Summary:"""
             title = title.strip('"\'')
             
             # Truncate if too long
-            return title[:60] + "..." if len(title) > 60 else title
+            return title[:GROQ_TITLE_MAX_LENGTH] + "..." if len(title) > GROQ_TITLE_MAX_LENGTH else title
         
         except Exception as e:
-            print(f"Error generating title: {e}")
-            return summary[:60] + "..." if len(summary) > 60 else summary
+            logger.error("Error generating title: %s", e)
+            return summary[:GROQ_TITLE_MAX_LENGTH] + "..." if len(summary) > GROQ_TITLE_MAX_LENGTH else summary
 
 
 # Global instance

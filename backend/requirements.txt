@@ -12,3 +12,4 @@ tiktoken==0.5.2
 numpy>=1.24.0
 python-jose[cryptography]
 requests
+flask-limiter
