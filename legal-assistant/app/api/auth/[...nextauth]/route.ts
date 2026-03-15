@@ -47,6 +47,34 @@ export const authOptions: NextAuthOptions = {
         token.sub = user.id;
         token.supabaseAccessToken = (user as any).supabaseAccessToken;
       }
+
+      // Refresh the Supabase token if it's about to expire
+      // Supabase tokens last ~1 hour; refresh when within 5 min of expiry
+      if (token.supabaseAccessToken) {
+        try {
+          // Decode JWT payload to check expiration (no verification needed here)
+          const payload = JSON.parse(
+            Buffer.from(token.supabaseAccessToken.split(".")[1], "base64").toString()
+          );
+          const expiresAt = payload.exp * 1000; // convert to ms
+          const fiveMinutes = 5 * 60 * 1000;
+
+          if (Date.now() > expiresAt - fiveMinutes) {
+            // Token is expired or about to expire — try to refresh
+            const supabase = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            );
+            const { data, error } = await supabase.auth.refreshSession();
+            if (!error && data.session) {
+              token.supabaseAccessToken = data.session.access_token;
+            }
+          }
+        } catch {
+          // If refresh fails, keep the existing token and let backend return 401
+        }
+      }
+
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
