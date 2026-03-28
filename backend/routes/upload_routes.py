@@ -6,10 +6,15 @@ Extracted from app.py. Thin route handler that delegates to IngestionService.
 import logging
 from flask import Blueprint, request, jsonify
 
-from auth import require_auth
-from validators import validate_file_type, validate_file_signature, sanitize_filename
+from auth import require_auth, enforce_session_ownership
+from validators import (
+    validate_file_type, validate_file_signature, sanitize_filename,
+    validate_file_size, validate_pdf_content, validate_docx_content_security,
+    scan_text_for_injection,
+)
 from managers.session_manager import SessionManager
 from services.ingestion_service import IngestionService
+from config import MAX_FILE_SIZE, IS_PRODUCTION
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +41,6 @@ def _safe_error(message: str, details: str = None, status_code: int = 500):
     if details and not IS_PRODUCTION:
         response["details"] = details
     return jsonify(response), status_code
-
-
-def _enforce_session_ownership(session_id: str, user_id: str):
-    session = _session_mgr.get_session(session_id)
-    if not session:
-        return None, (jsonify({"error": "Session not found"}), 404)
-    if session.get("user_id") != user_id:
-        return None, (jsonify({"error": "Access denied"}), 403)
-    return session, None
 
 
 # ======================
@@ -86,7 +82,7 @@ def upload_document():
 
         # 3. Enforce session ownership
         if session_id:
-            session, error = _enforce_session_ownership(session_id, user_id)
+            session, error = enforce_session_ownership(session_id, user_id, _session_mgr)
             if error:
                 return error
         else:
@@ -96,19 +92,77 @@ def upload_document():
             )
             session_id = session["id"]
 
-        # 4. Read file content
+        # 4. Validate file size BEFORE reading into memory
+        size_ok, file_size = validate_file_size(file, MAX_FILE_SIZE)
+        if not size_ok:
+            max_mb = MAX_FILE_SIZE // (1024 * 1024)
+            actual_mb = round(file_size / (1024 * 1024), 2)
+            return jsonify({
+                "error": f"File too large ({actual_mb}MB). Maximum size is {max_mb}MB"
+            }), 413
+
+        # 5. Read file content
         file_content = file.read()
         if len(file_content) == 0:
             return jsonify({"error": "File is empty"}), 400
 
-        # 5. Validate actual file bytes against claimed type
+        # 6. Validate actual file bytes against claimed type
         if not validate_file_signature(file_content, file_type):
             return jsonify({
                 "error": "File content does not match its declared type. "
                          "Allowed: PDF, DOCX, TXT"
             }), 400
 
-        # 6. Process and store document
+        # 7. Deep content security scan
+        docx_mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+        if file_type == 'application/pdf':
+            is_safe, threats = validate_pdf_content(file_content)
+            if not is_safe:
+                logger.warning(
+                    "Blocked PDF upload from user %s: %s",
+                    user_id, ", ".join(threats)
+                )
+                error_msg = (
+                    "File rejected: security policy violation"
+                    if IS_PRODUCTION
+                    else f"PDF contains dangerous content: {', '.join(threats)}"
+                )
+                return jsonify({"error": error_msg}), 400
+
+        elif file_type == docx_mime:
+            is_safe, threats = validate_docx_content_security(file_content)
+            if not is_safe:
+                logger.warning(
+                    "Blocked DOCX upload from user %s: %s",
+                    user_id, ", ".join(threats)
+                )
+                error_msg = (
+                    "File rejected: security policy violation"
+                    if IS_PRODUCTION
+                    else f"DOCX contains dangerous content: {', '.join(threats)}"
+                )
+                return jsonify({"error": error_msg}), 400
+
+        elif file_type == 'text/plain':
+            try:
+                text_content = file_content.decode('utf-8')
+            except UnicodeDecodeError:
+                text_content = file_content.decode('latin-1')
+            is_safe, matches = scan_text_for_injection(text_content)
+            if not is_safe:
+                logger.warning(
+                    "Blocked text upload from user %s — injection patterns: %s",
+                    user_id, ", ".join(matches)
+                )
+                error_msg = (
+                    "File rejected: security policy violation"
+                    if IS_PRODUCTION
+                    else f"Text contains prompt injection patterns: {', '.join(matches)}"
+                )
+                return jsonify({"error": error_msg}), 400
+
+        # 8. Process and store document
         result = _ingestion.process_and_store(
             user_id=user_id,
             session_id=session_id,
