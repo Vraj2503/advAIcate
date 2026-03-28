@@ -6,7 +6,7 @@ Extracted from app.py. Thin route handlers that delegate to ChatService.
 import logging
 from flask import Blueprint, request, jsonify
 
-from auth import require_auth
+from auth import require_auth, enforce_session_ownership
 from managers.session_manager import SessionManager
 from services.chat_service import ChatService
 
@@ -39,16 +39,6 @@ def _safe_error(message: str, details: str = None, status_code: int = 500):
     if details and not IS_PRODUCTION:
         response["details"] = details
     return jsonify(response), status_code
-
-
-def _enforce_session_ownership(session_id: str, user_id: str):
-    """Verify session exists and belongs to user. Returns (session, error_tuple)."""
-    session = _session_mgr.get_session(session_id)
-    if not session:
-        return None, (jsonify({"error": "Session not found"}), 404)
-    if session.get("user_id") != user_id:
-        return None, (jsonify({"error": "Access denied"}), 403)
-    return session, None
 
 
 # ======================
@@ -90,7 +80,7 @@ def chat():
 
         # Enforce session ownership
         if session_id:
-            session, error = _enforce_session_ownership(session_id, user["id"])
+            session, error = enforce_session_ownership(session_id, user["id"], _session_mgr)
             if error:
                 return error
 
@@ -120,7 +110,7 @@ def end_session():
         if not session_id:
             return jsonify({"error": "session_id required"}), 400
 
-        session, error = _enforce_session_ownership(session_id, user["id"])
+        session, error = enforce_session_ownership(session_id, user["id"], _session_mgr)
         if error:
             return error
 

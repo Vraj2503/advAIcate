@@ -240,3 +240,34 @@ def verify_supabase_token_with_refresh(token: str):
         raise AuthError("Authentication service error", f"JWKS refresh failed: {str(e)}")
 
     return verify_supabase_token(token)
+
+
+# ======================
+# SESSION OWNERSHIP
+# ======================
+
+def enforce_session_ownership(session_id: str, user_id: str, session_manager):
+    """
+    Verify that a session exists and belongs to the authenticated user.
+
+    Centralized ownership check used by all route handlers.
+
+    Args:
+        session_id:       The session to verify.
+        user_id:          The authenticated user's ID.
+        session_manager:  A SessionManager instance (injected to avoid circular imports).
+
+    Returns:
+        (session_dict, None) on success.
+        (None, (json_response, status_code)) on failure.
+    """
+    session = session_manager.get_session(session_id)
+    if not session:
+        return None, (jsonify({"error": "Session not found"}), 404)
+    if session.get("user_id") != user_id:
+        logger.warning(
+            "Session ownership violation: user %s attempted to access session %s",
+            user_id, session_id
+        )
+        return None, (jsonify({"error": "Access denied"}), 403)
+    return session, None

@@ -7,6 +7,8 @@ Both app.py routes and document_processor.py defer to this module.
 import io
 import zipfile
 import logging
+import re
+import xml.etree.ElementTree as ET
 
 from config import (
     ALLOWED_MIME_TYPES,
@@ -17,9 +19,52 @@ from config import (
     MAX_DOCX_DECOMPRESSED_SIZE,
     MAX_DOCX_ENTRY_SIZE,
     DOCX_COMPRESSION_RATIO_LIMIT,
+    MAX_FILE_SIZE
 )
 
 logger = logging.getLogger(__name__)
+
+PDF_DANGEROUS_PATTERNS = [
+    rb'/JavaScript',
+    rb'/JS\s',
+    rb'/OpenAction',
+    rb'/AA\s',
+    rb'/Launch',
+    rb'/EmbeddedFile',
+    rb'/RichMedia',
+    rb'/XFA',
+    rb'/SubmitForm',
+    rb'/ImportData',
+]
+
+def validate_pdf_content(file_content: bytes) -> tuple:
+    """
+    Scan PDF content for potentially dangerous active content.
+    
+    Args:
+        file_content: Raw PDF bytes.
+    
+    Returns:
+        (is_safe: bool, list_of_threats: list[str])
+    """
+    threats = []
+    
+    for pattern in PDF_DANGEROUS_PATTERNS:
+        if re.search(pattern, file_content, re.IGNORECASE):
+            keyword = pattern.decode('utf-8', errors='replace').strip('/')
+            threats.append(keyword)
+    
+    # Check for excessive embedded objects (potential exploit)
+    obj_count = len(re.findall(rb'\d+\s+\d+\s+obj', file_content))
+    if obj_count > 10000:
+        threats.append(f"Excessive objects ({obj_count})")
+    
+    # Check for encrypted/obfuscated streams (common in malicious PDFs)
+    encrypt_count = len(re.findall(rb'/Encrypt', file_content))
+    if encrypt_count > 0:
+        threats.append("Encrypted content")
+    
+    return len(threats) == 0, threats
 
 
 class DocumentSecurityError(Exception):
@@ -162,6 +207,145 @@ def sanitize_filename(filename: str) -> str:
         filename = 'unnamed_file'
 
     return filename
+
+def validate_file_size(file, max_size_bytes: int) -> tuple:
+    """
+    Check the actual file size BEFORE reading into memory.
+
+    Uses seek to determine size without buffering the entire file.
+
+    Args:
+        file:            A file-like object (e.g., from request.files).
+        max_size_bytes:  Maximum allowed size in bytes.
+
+    Returns:
+        (True, file_size)  if within limit.
+        (False, file_size) if exceeds limit.
+    """
+    file.seek(0, 2)        # Seek to end of file
+    file_size = file.tell() # Get position = file size in bytes
+    file.seek(0)            # Reset to beginning for subsequent .read()
+    return file_size <= max_size_bytes, file_size
+
+
+def validate_docx_content_security(file_content: bytes) -> tuple:
+    """
+    Scan DOCX content for malicious payloads including VBA macros,
+    external reference SSRF, and DDE field injection.
+
+    Args:
+        file_content: Raw DOCX bytes.
+
+    Returns:
+        (is_safe: bool, list_of_threats: list[str])
+    """
+    threats = []
+
+    # Dangerous ZIP entries that should never appear in a safe DOCX
+    dangerous_entries = [
+        'word/vbaProject.bin',
+        'word/vbaData.xml',
+        'customXml/',
+    ]
+
+    # Dangerous OLE relationship types (full schema URLs)
+    dangerous_rel_types = [
+        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject',
+        'http://schemas.microsoft.com/office/2006/relationships/vbaProject',
+        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/frame',
+    ]
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(file_content), 'r') as zf:
+            namelist = zf.namelist()
+
+            # Check for dangerous file entries
+            for entry in dangerous_entries:
+                for name in namelist:
+                    if name == entry or name.startswith(entry):
+                        threats.append(f"Dangerous entry: {name}")
+
+            # Parse all .rels files for dangerous relationships
+            rels_files = [n for n in namelist if n.endswith('.rels')]
+            for rels_file in rels_files:
+                try:
+                    rels_content = zf.read(rels_file)
+                    root = ET.fromstring(rels_content)
+                    for rel in root:
+                        rel_type = rel.get('Type', '')
+                        target = rel.get('Target', '')
+                        target_mode = rel.get('TargetMode', '')
+
+                        # Check for external references (SSRF risk)
+                        if target_mode == 'External' and (
+                            target.startswith('http://') or target.startswith('https://')):
+                            threats.append(f"External reference (SSRF risk): {target[:100]}")
+
+                        # Check for dangerous relationship types
+                        for dangerous_type in dangerous_rel_types:
+                            if rel_type == dangerous_type:
+                                threats.append(f"Dangerous relationship: {rel_type}")
+                except ET.ParseError:
+                    threats.append(f"Malformed XML in {rels_file}")
+
+            # Check word/document.xml for DDE and external data references
+            if 'word/document.xml' in namelist:
+                try:
+                    doc_content = zf.read('word/document.xml').decode('utf-8', errors='replace')
+                    if re.search(r'\bDDE\b', doc_content, re.IGNORECASE):
+                        threats.append("DDE field code detected")
+                    if re.search(r'\bDDEAUTO\b', doc_content, re.IGNORECASE):
+                        threats.append("DDEAUTO field code detected")
+                    if re.search(r'externalData', doc_content, re.IGNORECASE):
+                        threats.append("External data reference detected")
+                except Exception:
+                    threats.append("Failed to read document.xml")
+
+    except zipfile.BadZipFile:
+        threats.append("Invalid ZIP/DOCX structure")
+    except Exception as e:
+        logger.error("DOCX security scan failed: %s", e)
+        threats.append("Security scan error")
+
+    return len(threats) == 0, threats
+
+
+# Compiled regex patterns for common prompt injection attempts
+_INJECTION_PATTERNS = [
+    re.compile(r'ignore\s+(all\s+)?previous\s+instructions', re.IGNORECASE),
+    re.compile(r'ignore\s+(all\s+)?above\s+instructions', re.IGNORECASE),
+    re.compile(r'disregard\s+(all\s+)?(previous|prior|above)', re.IGNORECASE),
+    re.compile(r'you\s+are\s+now', re.IGNORECASE),
+    re.compile(r'new\s+instructions?:', re.IGNORECASE),
+    re.compile(r'system\s+prompt:', re.IGNORECASE),
+    re.compile(r'output\s+(your|the)\s+system\s+prompt', re.IGNORECASE),
+    re.compile(r'reveal\s+(your|the)\s+(system|initial)\s+prompt', re.IGNORECASE),
+    re.compile(r'<system>', re.IGNORECASE),
+    re.compile(r'\[INST\]', re.IGNORECASE),
+    re.compile(r'```\s*system', re.IGNORECASE),
+]
+
+
+def scan_text_for_injection(text: str, threshold: int = 2) -> tuple:
+    """
+    Scan text content for prompt injection patterns.
+
+    A single match is tolerated (the user may be discussing the topic),
+    but multiple distinct matches indicate an actual injection attempt.
+
+    Args:
+        text:       The text content to scan.
+        threshold:  Number of distinct pattern matches to trigger a block.
+                    Defaults to 2.
+
+    Returns:
+        (is_safe: bool, list_of_matched_patterns: list[str])
+    """
+    matches = []
+    for pattern in _INJECTION_PATTERNS:
+        if pattern.search(text):
+            matches.append(pattern.pattern)
+    return len(matches) < threshold, matches
 
 
 def verify_content_matches_type(file_content: bytes, file_type: str) -> None:
