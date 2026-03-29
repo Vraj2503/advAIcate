@@ -55,6 +55,11 @@ def session_end_preflight():
     return ("", 204)
 
 
+@chat_bp.route("/api/sessions/<session_id>/messages", methods=["OPTIONS"])
+def session_messages_preflight(session_id):
+    return ("", 204)
+
+
 # ======================
 # ROUTES
 # ======================
@@ -148,3 +153,29 @@ def get_sessions():
 
     except Exception as e:
         return _safe_error("Failed to fetch sessions", str(e), 500)
+
+
+@chat_bp.route("/api/sessions/<session_id>/messages", methods=["GET"])
+@require_auth
+def get_session_messages(session_id):
+
+    try:
+        user_id = request.user["id"]
+
+        # Verify session ownership
+        session, error = enforce_session_ownership(session_id, user_id, _session_mgr)
+        if error:
+            return error
+
+        from managers.message_manager import MessageManager
+        message_mgr = MessageManager()
+        messages = message_mgr.get_session_messages(session_id)
+
+        return jsonify({
+            "success": True,
+            "messages": messages,
+            "count": len(messages)
+        })
+
+    except Exception as e:
+        return _safe_error("Failed to fetch messages", str(e), 500)
