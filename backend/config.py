@@ -43,7 +43,8 @@ GROQ_TITLE_MAX_LENGTH = int(os.getenv("GROQ_TITLE_MAX_LENGTH", "60"))
 # FILE UPLOAD
 # ======================
 
-MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(10 * 1024 * 1024)))  # 10MB
+MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(50 * 1024 * 1024)))  # 50MB
+MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", str(MAX_CONTENT_LENGTH)))
 
 ALLOWED_MIME_TYPES = {
     'application/pdf',
