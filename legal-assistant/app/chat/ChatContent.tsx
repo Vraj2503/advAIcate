@@ -212,6 +212,40 @@ const Chat = () => {
     setSidebarOpen(false);
   };
 
+  const handleSelectSession = async (selectedSessionId: string, title: string) => {
+    // If same session, just close sidebar
+    if (selectedSessionId === sessionId) {
+      setSidebarOpen(false);
+      return;
+    }
+
+    // Set the selected session
+    setSessionId(selectedSessionId);
+    setChatTitle(title);
+    setMessages([]);
+    setSidebarOpen(false);
+
+    // Load messages for this session from the backend
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await apiFetch(`${apiUrl}/api/sessions/${selectedSessionId}/messages`);
+      const data = await response.json();
+
+      if (response.ok && data.messages) {
+        const loadedMessages: Message[] = data.messages.map((msg: any, index: number) => ({
+          id: msg.id || `loaded-${index}`,
+          role: msg.role === "assistant" ? "bot" : msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.created_at).toLocaleTimeString(),
+          isAnimating: false,
+        }));
+        setMessages(loadedMessages);
+      }
+    } catch (error) {
+      console.error("Failed to load session messages:", error);
+    }
+  };
+
   /* ==================== LOADING ==================== */
 
   if (loadingAuth) {
@@ -246,6 +280,8 @@ const Chat = () => {
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         chatTitle={chatTitle}
         onNewChat={handleNewChat}
+        currentSessionId={sessionId}
+        onSelectSession={handleSelectSession}
       />
 
       {/* Main content area */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,15 +13,27 @@ import {
   LogOut,
   Home,
   Scale,
+  Loader2,
 } from "lucide-react";
 import ThemeToggle from "../../components/ThemeToggle";
 import { useTheme } from "../../contexts/ThemeContext";
+import { apiFetch } from "@/lib/api";
+
+interface ChatSession {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  status?: string;
+}
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   chatTitle: string | null;
   onNewChat: () => void;
+  currentSessionId: string | null;
+  onSelectSession: (sessionId: string, title: string) => void;
 }
 
 export default function Sidebar({
@@ -29,12 +41,63 @@ export default function Sidebar({
   onToggle,
   chatTitle,
   onNewChat,
+  currentSessionId,
+  onSelectSession,
 }: SidebarProps) {
   const { data: session } = useSession();
   const { theme } = useTheme();
   const [imageError, setImageError] = useState(false);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   const isLight = theme === "light";
+  const hasUser = !!session?.user;
+  const isFetchingRef = useRef(false);
+
+  // Fetch chat sessions from Supabase via backend API
+  const fetchSessions = useCallback(async () => {
+    if (!hasUser || isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+    setIsLoadingSessions(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await apiFetch(`${apiUrl}/api/sessions`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setChatSessions(data.sessions || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch chat sessions:", error);
+    } finally {
+      setIsLoadingSessions(false);
+      isFetchingRef.current = false;
+    }
+  }, [hasUser]);
+
+  // Fetch on mount and refresh when sidebar opens
+  useEffect(() => {
+    if (hasUser && isOpen) {
+      fetchSessions();
+    }
+  }, [isOpen, hasUser, fetchSessions]);
+
+  // Format relative time for session timestamps
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <>
@@ -111,21 +174,61 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Chat history (placeholder for future) */}
-        <div className="flex-1 overflow-y-auto px-3 py-1">
+        {/* Chat history */}
+        <div className="flex-1 overflow-y-auto px-3 py-1 chat-scrollbar-minimal">
           <p className={`text-xs font-medium uppercase tracking-wider px-3 mb-2 ${
             isLight ? "text-slate-400" : "text-slate-500"
           }`}>
             Recent
           </p>
-          {chatTitle && (
-            <div className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm ${
-              isLight
-                ? "bg-orange-50/60 text-slate-700"
-                : "bg-slate-800/60 text-slate-300"
+
+          {isLoadingSessions ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className={`w-5 h-5 animate-spin ${
+                isLight ? "text-slate-400" : "text-slate-500"
+              }`} />
+            </div>
+          ) : chatSessions.length === 0 && !chatTitle ? (
+            <p className={`text-xs px-3 py-4 text-center ${
+              isLight ? "text-slate-400" : "text-slate-500"
             }`}>
-              <MessageSquare className="w-4 h-4 flex-shrink-0 opacity-60" />
-              <span className="truncate">{chatTitle}</span>
+              No chat history yet
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {chatSessions.map((s) => {
+                const isActive = s.id === currentSessionId;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => onSelectSession(s.id, s.title)}
+                    className={`w-full flex items-start space-x-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors duration-150 group ${
+                      isActive
+                        ? isLight
+                          ? "bg-orange-50 text-orange-800 border border-orange-200"
+                          : "bg-slate-800 text-slate-100 border border-slate-600"
+                        : isLight
+                          ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                    }`}
+                    title={s.title}
+                  >
+                    <MessageSquare className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+                      isActive
+                        ? isLight ? "text-orange-600" : "text-orange-400"
+                        : "opacity-50 group-hover:opacity-80"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <span className="truncate block">{s.title}</span>
+                      <span className={`text-[11px] mt-0.5 block ${
+                        isLight ? "text-slate-400" : "text-slate-500"
+                      }`}>
+                        {formatRelativeTime(s.updated_at)}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

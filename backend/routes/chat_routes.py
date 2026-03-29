@@ -55,6 +55,11 @@ def session_end_preflight():
     return ("", 204)
 
 
+@chat_bp.route("/api/sessions/<session_id>/messages", methods=["OPTIONS"])
+def session_messages_preflight(session_id):
+    return ("", 204)
+
+
 # ======================
 # ROUTES
 # ======================

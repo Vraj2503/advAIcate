@@ -75,3 +75,15 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
+
+/* All buttons and clickable elements should show pointer cursor */
+button,
+[role="button"],
+a,
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+select,
+summary {
+  cursor: pointer;
+}
