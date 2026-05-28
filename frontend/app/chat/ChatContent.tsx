@@ -164,6 +164,12 @@ const Chat = () => {
       }
 
       setIsTyping(false);
+
+      // Persist session_id from backend so subsequent messages use the same session
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id);
+      }
+
       setMessages((prev) => [
         ...prev,
         {

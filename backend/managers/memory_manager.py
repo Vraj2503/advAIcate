@@ -4,7 +4,7 @@ Memory Manager — user memory persistence and vector similarity search.
 
 import logging
 from typing import Optional, Dict, List, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from managers.base_manager import BaseManager
 from config import ALLOWED_MEMORY_TYPES
 
@@ -50,8 +50,8 @@ class MemoryManager(BaseManager):
             "memory_type": memory_type,
             "content": content,
             "confidence": confidence,
-            "last_seen": datetime.utcnow().isoformat(),
-            "created_at": datetime.utcnow().isoformat()
+            "last_seen": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
 
         if embedding is not None:

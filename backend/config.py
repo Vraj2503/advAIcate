@@ -10,6 +10,7 @@ import os
 # ======================
 
 IS_PRODUCTION = os.getenv("FLASK_ENV") != "development"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO" if IS_PRODUCTION else "DEBUG")
 
 # ======================
 # SUPABASE
@@ -147,3 +148,22 @@ ALLOWED_MEMORY_TYPES = {
 }
 
 ALLOWED_MESSAGE_ROLES = {"user", "assistant", "system"}
+
+# ======================
+# CONTEXT WINDOW
+# ======================
+
+CONTEXT_WINDOW_SIZE = int(os.getenv("CONTEXT_WINDOW_SIZE", "8192"))
+TOKEN_SAFETY_MARGIN = int(os.getenv("TOKEN_SAFETY_MARGIN", "300"))
+HISTORY_FETCH_LIMIT = int(os.getenv("HISTORY_FETCH_LIMIT", "50"))
+
+# ======================
+# AUTO-SUMMARIZATION
+# ======================
+
+SUMMARY_TRIGGER_THRESHOLD = int(os.getenv("SUMMARY_TRIGGER_THRESHOLD", "20"))
+SUMMARY_BATCH_SIZE = int(os.getenv("SUMMARY_BATCH_SIZE", "10"))
+ROLLING_SUMMARY_MAX_TOKENS = int(os.getenv("ROLLING_SUMMARY_MAX_TOKENS", "200"))
+FINAL_SUMMARY_MAX_TOKENS = int(os.getenv("FINAL_SUMMARY_MAX_TOKENS", "500"))
+SESSION_INACTIVITY_TIMEOUT = int(os.getenv("SESSION_INACTIVITY_TIMEOUT", "1800"))
+SUMMARY_TEMPERATURE = float(os.getenv("SUMMARY_TEMPERATURE", "0.3"))

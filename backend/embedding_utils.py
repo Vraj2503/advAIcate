@@ -4,6 +4,7 @@ Handles text embeddings for RAG and semantic search
 """
 import logging
 import torch
+import threading
 from transformers import AutoTokenizer, AutoModel
 import numpy as np
 from typing import List, Union
@@ -144,10 +145,14 @@ class EmbeddingGenerator:
 
 # Global instance
 _embedding_generator = None
+_embedding_lock = threading.Lock()
 
 def get_embedding_generator() -> EmbeddingGenerator:
-    """Get or create the global embedding generator instance"""
+    """Get or create the global embedding generator instance (thread-safe)."""
     global _embedding_generator
     if _embedding_generator is None:
-        _embedding_generator = EmbeddingGenerator()
+        with _embedding_lock:
+            # Double-check after acquiring lock
+            if _embedding_generator is None:
+                _embedding_generator = EmbeddingGenerator()
     return _embedding_generator

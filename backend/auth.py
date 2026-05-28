@@ -22,7 +22,6 @@ from config import (
 
 _jwks_cache = None
 _jwks_cache_time = 0
-JWKS_CACHE_TTL = 3600  # Refresh JWKS keys every hour
 
 logger = logging.getLogger(__name__)
 

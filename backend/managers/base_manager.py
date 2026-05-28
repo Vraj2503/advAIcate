@@ -49,9 +49,6 @@ class BaseManager:
             if not url or not key:
                 raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
 
-            if not url.endswith('/'):
-                url = url + '/'
-
             BaseManager._client = create_client(url, key)
 
         self.client = BaseManager._client
