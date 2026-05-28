@@ -5,7 +5,7 @@ Document Manager — file upload, metadata storage, and document retrieval.
 import logging
 import uuid
 from typing import Optional, Dict, List, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from managers.base_manager import BaseManager, OwnershipError
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class DocumentManager(BaseManager):
             "storage_path": storage_path,
             "content": content,
             "metadata": metadata or {},
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
 
         if embedding is not None:

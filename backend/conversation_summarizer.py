@@ -193,4 +193,6 @@ def get_conversation_summarizer(groq_client: Optional[Groq] = None) -> Conversat
     global _conversation_summarizer
     if _conversation_summarizer is None:
         _conversation_summarizer = ConversationSummarizer(groq_client)
+    elif groq_client is not None and _conversation_summarizer.groq_client is None:
+        _conversation_summarizer.groq_client = groq_client
     return _conversation_summarizer

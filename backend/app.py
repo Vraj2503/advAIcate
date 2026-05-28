@@ -16,6 +16,7 @@ from flask_limiter.util import get_remote_address
 from config import (
     MAX_CONTENT_LENGTH,
     IS_PRODUCTION,
+    LOG_LEVEL,
     REDIS_URL,
     RATE_LIMIT_DEFAULT,
     DEFAULT_ALLOWED_ORIGINS,
@@ -24,6 +25,12 @@ from config import (
 
 from routes.chat_routes import chat_bp, init_chat_routes
 from routes.upload_routes import upload_bp, init_upload_routes
+
+# Configure logging before any logger is created
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.DEBUG),
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s",
+)
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,372 @@
+[
+  {
+    "id": "TC_001",
+    "category": "criminal law",
+    "question": "Can a police officer arrest someone without a warrant for a cognizable offense under the Bharatiya Nagarik Suraksha Sanhita (BNSS)?",
+    "ground_truth_answer": "Yes. Under Section 35 of the BNSS, 2023 (formerly Section 41 of the CrPC, 1873), a police officer may arrest any person without an order from a Magistrate and without a warrant if the person has been concerned in any cognizable offense, or against whom a reasonable complaint has been made, or credible information has been received.",
+    "source_chunks": [
+      "Section 35 of the Bharatiya Nagarik Suraksha Sanhita, 2023 deals with when police may arrest without warrant. (1) Any police officer may without an order from a Magistrate and without a warrant, arrest any person who has been concerned in any cognizable offence..."
+    ],
+    "document_name": "BNSS_2023_Chapter_V.txt"
+  },
+  {
+    "id": "TC_002",
+    "category": "criminal law",
+    "question": "What is the maximum period for which a person can be detained under preventive custody under the BNSS?",
+    "ground_truth_answer": "Under Section 38 of the BNSS, 2023, no person shall be detained in custody under preventive detention for a period exceeding 90 days without obtaining the opinion of an Advisory Board. The detention may be extended beyond 90 days only if the Advisory Board is satisfied that there are sufficient grounds for continuation.",
+    "source_chunks": [
+      "Section 38 of the Bharatiya Nagarik Suraksha Sanhita, 2023 states that no person shall be detained in custody under preventive detention for a period exceeding ninety days without obtaining the opinion of an Advisory Board..."
+    ],
+    "document_name": "BNSS_2023_Chapter_V.txt"
+  },
+  {
+    "id": "TC_003",
+    "category": "criminal law",
+    "question": "What are the provisions for anticipatory bail under the BNSS, 2023?",
+    "ground_truth_answer": "Under Section 40 of the BNSS, 2023, when a person has reason to believe that they may be arrested on accusation of having committed a non-bailable and cognizable offense, they may apply to the Court of Session or High Court for anticipatory bail. The court may grant bail and direct that the applicant be released on bail.",
+    "source_chunks": [
+      "Section 40 of the Bharatiya Nagarik Suraksha Sanhita, 2023 deals with direction for grant of bail to person apprehending arrest. When any person has reason to believe that he may be arrested on accusation of having committed a non-bailable and cognizable offence..."
+    ],
+    "document_name": "BNSS_2023_Chapter_V.txt"
+  },
+  {
+    "id": "TC_004",
+    "category": "criminal law",
+    "question": "What is the punishment for defamation under the Indian Penal Code?",
+    "ground_truth_answer": "Under Section 500 of the IPC (which corresponds to Section 356 of the BNS, 2023), whoever defames another shall be punished with simple imprisonment for a term which may extend to two years, or with fine, or with both. The offense of defamation is compoundable with the permission of the Court.",
+    "source_chunks": [
+      "Section 500 of the Indian Penal Code, 1860 states: Whoever defames another shall be punished with simple imprisonment for a term which may extend to two years, or with fine, or with both."
+    ],
+    "document_name": "IPC_1860_Section_500.txt"
+  },
+  {
+    "id": "TC_005",
+    "category": "criminal law",
+    "question": "When can a person claim self-defense under the Indian Penal Code?",
+    "ground_truth_answer": "Under Sections 96-106 of the IPC (Sections 34-44 of BNS, 2023), nothing is an offense if done by a person who is bound to do it by law, or by mistake of fact believing himself bound by law, or by reason of a mistake of fact and not a mistake of law. A person may use reasonable force to defend their own body or another person's body.",
+    "source_chunks": [
+      "Sections 96 to 106 of the Indian Penal Code deal with the right of private defence. Section 96 states that nothing is an offence which is done in the exercise of the right of private defence."
+    ],
+    "document_name": "IPC_1860_Right_of_Private_Defence.txt"
+  },
+  {
+    "id": "TC_006",
+    "category": "procedural",
+    "question": "What is the procedure for filing a charge sheet under the BNSS?",
+    "ground_truth_answer": "Under Section 173 of the BNSS, 2023, the police shall investigate the case and submit a report (charge sheet) to the Magistrate within 60 days (for offenses punishable with less than 10 years) or 90 days (for other offenses). The Magistrate, upon receiving the charge sheet, shall take cognizance of the offense.",
+    "source_chunks": [
+      "Section 173 of the Bharatiya Nagarik Suraksha Sanhita, 2023 deals with the investigation report. The police officer shall complete the investigation and submit a report within a specified period..."
+    ],
+    "document_name": "BNSS_2023_Chapter_XII.txt"
+  },
+  {
+    "id": "TC_007",
+    "category": "procedural",
+    "question": "What is the process for issuing a summons under the CPC?",
+    "ground_truth_answer": "Under Order V of the CPC, 1908, a summons shall be issued by the Court to require the defendant to appear and answer the claim. The summons shall be served either personally or by leaving it at the defendant's residence or business place, or by registered post.",
+    "source_chunks": [
+      "Order V of the Code of Civil Procedure, 1908 deals with the summons to defendants. Rule 1 states that when a suit is filed, the plaintiff shall file a summons for appearance of the defendant."
+    ],
+    "document_name": "CPC_1908_Order_V.txt"
+  },
+  {
+    "id": "TC_008",
+    "category": "procedural",
+    "question": "What is the limitation period for filing an appeal under the CPC?",
+    "ground_truth_answer": "Under Section 96 of the CPC, 1908, any appeal shall be filed within 30 days from the date of the decree or from the date on which the decree is signed. The appellate court may extend this period if the appellant demonstrates sufficient cause for delay.",
+    "source_chunks": [
+      "Section 96 of the Code of Civil Procedure, 1908 states that any person aggrieved by a decree may appeal to the Court of District Judge or High Court within thirty days..."
+    ],
+    "document_name": "CPC_1908_Section_96.txt"
+  },
+  {
+    "id": "TC_009",
+    "category": "civil law",
+    "question": "What are the essential elements of a valid contract under the Indian Contract Act, 1872?",
+    "ground_truth_answer": "Under Section 10 of the Indian Contract Act, 1872, all agreements are contracts if they are made by the free consent of parties competent to contract, for a lawful consideration and with a lawful object, and are not expressly declared to be void. Essential elements include: offer, acceptance, consideration, capacity of parties, free consent, lawful object, and intention to create legal relationship.",
+    "source_chunks": [
+      "Section 10 of the Indian Contract Act, 1872 states that all agreements are contracts if they are made by the free consent of parties competent to contract, for a lawful consideration and with a lawful object."
+    ],
+    "document_name": "Indian_Contract_Act_1872_Section_10.txt"
+  },
+  {
+    "id": "TC_010",
+    "category": "civil law",
+    "question": "What is the distinction between a void and voidable contract?",
+    "ground_truth_answer": "Under the Indian Contract Act, 1872, a void contract is one that is not enforceable by law at all (Section 2(j)), such as agreements without consideration or illegal agreements. A voidable contract is one that is enforceable by law at the option of one party but not at the option of the other (Section 2(i)), such as contracts induced by fraud or coercion.",
+    "source_chunks": [
+      "Section 2(j) of the Indian Contract Act defines a void contract as an agreement not enforceable by law. Section 2(i) defines a voidable contract as an agreement enforceable by law at the option of one or more parties..."
+    ],
+    "document_name": "Indian_Contract_Act_1872_Section_2.txt"
+  },
+  {
+    "id": "TC_011",
+    "category": "civil law",
+    "question": "What is the law governing partner's rights and duties in a partnership firm?",
+    "ground_truth_answer": "The Indian Partnership Act, 1932 governs partnership firms. Section 9 provides that partners must be diligent and not engage in business activities that conflict with the firm's interests. Section 12 defines mutual rights and duties of partners, including the right to take part in management, access to books, and the duty to render true accounts.",
+    "source_chunks": [
+      "Section 9 of the Indian Partnership Act, 1932 states that partners must be just and faithful to each other. Section 12 defines the mutual rights and duties of partners..."
+    ],
+    "document_name": "Partnership_Act_1932.txt"
+  },
+  {
+    "id": "TC_012",
+    "category": "civil law",
+    "question": "What are the provisions for specific performance of a contract?",
+    "ground_truth_answer": "Under Section 10 of the Specific Relief Act, 1963, specific performance of a contract is enforced by the court. Section 14 specifies when specific performance cannot be granted, such as when the contract is for personal services, or when the court cannot supervise performance. Section 20 allows the court to grant specific performance in cases where monetary compensation would be inadequate.",
+    "source_chunks": [
+      "Section 10 of the Specific Relief Act, 1963 states that the plaintiff can claim specific performance of a contract. Section 14 enumerates contracts which cannot be specifically enforced..."
+    ],
+    "document_name": "Specific_Relief_Act_1963.txt"
+  },
+  {
+    "id": "TC_013",
+    "category": "factual",
+    "question": "What documents are required to file a consumer complaint under the Consumer Protection Act?",
+    "ground_truth_answer": "Under the Consumer Protection Act, 2019, a complaint can be filed by a consumer or any recognized consumer association. The complaint must include: the name, description, and address of the complainant; the name, address, and registration number of the opposite party; facts relating to and supporting the claim; and the relief sought. No court fee is required.",
+    "source_chunks": [
+      "Section 2(6) of the Consumer Protection Act, 2019 defines complaint. The complaint must contain the name, description and address of the complainant, and the name, address and registration number of the opposite party..."
+    ],
+    "document_name": "Consumer_Protection_Act_2019.txt"
+  },
+  {
+    "id": "TC_014",
+    "category": "factual",
+    "question": "What is the jurisdiction of NCLT under the Insolvency and Bankruptcy Code?",
+    "ground_truth_answer": "Under the Insolvency and Bankruptcy Code, 2016, the National Company Law Tribunal (NCLT) has jurisdiction to entertain applications for corporate insolvency resolution, liquidation, and bankruptcy. Section 60 of the IBC gives NCLT exclusive jurisdiction over insolvency matters relating to corporate debtors.",
+    "source_chunks": [
+      "Section 60 of the Insolvency and Bankruptcy Code, 2016 states that the NCLT shall have jurisdiction over all applications for corporate insolvency resolution and liquidation..."
+    ],
+    "document_name": "IBC_2016_Section_60.txt"
+  },
+  {
+    "id": "TC_015",
+    "category": "factual",
+    "question": "What is the procedure for trademark registration in India?",
+    "ground_truth_answer": "Under the Trade Marks Act, 1999, a trademark can be registered by filing an application with the Registrar of Trade Marks. The application must contain the trademark, goods or services classification, and the applicant's details. The Registrar examines the application, publishes it for opposition, and if no opposition is filed, registers the trademark.",
+    "source_chunks": [
+      "Section 18 of the Trade Marks Act, 1999 states that any person claiming to be the proprietor of a trademark may apply for registration. The application shall be filed in the prescribed manner..."
+    ],
+    "document_name": "Trade_Marks_Act_1999.txt"
+  },
+  {
+    "id": "TC_016",
+    "category": "analytical",
+    "question": "How does the doctrine of force majeure apply to contracts affected by the COVID-19 pandemic?",
+    "ground_truth_answer": "The doctrine of force majeure excuses non-performance of contractual obligations when an extraordinary event beyond the control of parties prevents performance. Under Section 32 of the Indian Contract Act, 1872, contracts contingent on the happening of an event become void if the event becomes impossible. COVID-19 may qualify if it renders performance impossible or impracticable, though courts require proper documentation and notice.",
+    "source_chunks": [
+      "Section 32 of the Indian Contract Act, 1872 deals with contingent contracts. Contracts contingent on the happening of an event become void if the event becomes impossible..."
+    ],
+    "document_name": "Indian_Contract_Act_1872_Section_32.txt"
+  },
+  {
+    "id": "TC_017",
+    "category": "analytical",
+    "question": "What is the doctrine of frustration under the Indian Contract Act?",
+    "ground_truth_answer": "Under Section 56 of the Indian Contract Act, 1872, a contract becomes void if performance becomes impossible after the contract is made, due to an event that the promisor could not prevent. This doctrine of frustration applies when there is a fundamental change in circumstances that destroys the very foundation of the contract.",
+    "source_chunks": [
+      "Section 56 of the Indian Contract Act, 1872 states that an agreement to do an impossible act is void. A contract becomes void if performance becomes impossible after the contract is made..."
+    ],
+    "document_name": "Indian_Contract_Act_1872_Section_56.txt"
+  },
+  {
+    "id": "TC_018",
+    "category": "analytical",
+    "question": "What are the legal principles governing piercing of the corporate veil?",
+    "ground_truth_answer": "The corporate veil separates shareholders from company liabilities. Courts may pierce the veil when: the company is used for fraud or illegal purposes (Section 34 of the Companies Act, 2013), when the company is a mere shell, when there is alter ego doctrine application, or when tax evasion is involved. The court looks at the substance over form in such cases.",
+    "source_chunks": [
+      "Section 34 of the Companies Act, 2013 states that the corporate veil shall be lifted if the company is formed for fraudulent purposes or acts of fraud."
+    ],
+    "document_name": "Companies_Act_2013_Section_34.txt"
+  },
+  {
+    "id": "TC_019",
+    "category": "procedural",
+    "question": "What is the procedure for filing a writ petition under Article 226 of the Constitution?",
+    "ground_truth_answer": "Under Article 226 of the Constitution, any person aggrieved by governmental action or inaction can approach the High Court for fundamental rights enforcement. The petition must show: clear legal right, constitutional or statutory violation, and that no alternate adequate remedy exists. The court may issue directions, orders, or writs including habeas corpus, mandamus, prohibition, certiorari, and quo warranto.",
+    "source_chunks": [
+      "Article 226 of the Constitution of India empowers High Courts to issue writs for enforcement of fundamental rights and for any other purpose. The High Court may issue directions, orders, or writs..."
+    ],
+    "document_name": "Constitution_Article_226.txt"
+  },
+  {
+    "id": "TC_020",
+    "category": "procedural",
+    "question": "What is the process for anticipatory bail and when is it granted?",
+    "ground_truth_answer": "Under Section 40 of the BNSS, 2023, anticipatory bail can be granted when a person has reason to believe they may be arrested for a non-bailable offense. The court considers factors like the nature of the offense, the applicant's antecedents, and whether the accusation is frivolous. The bail may have conditions like surrendering passport, not leaving jurisdiction, and cooperating with investigation.",
+    "source_chunks": [
+      "Section 40 of the Bharatiya Nagarik Suraksha Sanhita, 2023: When any person has reason to believe that he may be arrested on accusation of having committed a non-bailable and cognizable offence, he may apply to the Court of Session or High Court for grant of bail..."
+    ],
+    "document_name": "BNSS_2023_Section_40.txt"
+  },
+  {
+    "id": "TC_021",
+    "category": "civil law",
+    "question": "What are the grounds for divorce under the Hindu Marriage Act, 1955?",
+    "ground_truth_answer": "Under Section 13 of the Hindu Marriage Act, 1955, grounds for divorce include: adultery, cruelty, desertion for two years, conversion to another religion, unsound mind, renunciation of world, having a living spouse, and mutual consent (after one year separation). Additional grounds for wives under Section 13(2) include polygamy, rape, sodomy, or cruelty.",
+    "source_chunks": [
+      "Section 13 of the Hindu Marriage Act, 1955 enumerates grounds for divorce. Either party may seek divorce on grounds including adultery, cruelty, desertion, conversion, unsound mind, or mutual consent..."
+    ],
+    "document_name": "Hindu_Marriage_Act_1955_Section_13.txt"
+  },
+  {
+    "id": "TC_022",
+    "category": "civil law",
+    "question": "What are the provisions for maintenance under Section 125 of the CrPC?",
+    "ground_truth_answer": "Under Section 125 of the CrPC (now Section 144 of BNSS), a magistrate can order a person having sufficient means to pay maintenance to their wife, minor children, or parents who are unable to maintain themselves. The amount depends on the person's income and the claimant's needs, payable from the date of order.",
+    "source_chunks": [
+      "Section 125 of the Code of Criminal Procedure states that if any person having sufficient means neglects or refuses to maintain his wife, minor legitimate or illegitimate child, or aged parent, the Magistrate may order maintenance..."
+    ],
+    "document_name": "CrPC_Section_125.txt"
+  },
+  {
+    "id": "TC_023",
+    "category": "civil law",
+    "question": "What is the law regarding Copyright infringement in India?",
+    "ground_truth_answer": "Under the Copyright Act, 1957, copyright infringement occurs when someone does anything that only the copyright owner has the exclusive right to do, without permission. This includes reproduction, distribution, public performance, or making adaptations. Remedies include civil injunctions, damages, account of profits, and delivery of infringing copies.",
+    "source_chunks": [
+      "Section 51 of the Copyright Act, 1957 states that a copyright is infringed when any person does anything which the owner has the exclusive right to do, without the consent of the owner..."
+    ],
+    "document_name": "Copyright_Act_1957_Section_51.txt"
+  },
+  {
+    "id": "TC_024",
+    "category": "criminal law",
+    "question": "What are the provisions for bail in non-bailable offenses?",
+    "ground_truth_answer": "Under Section 436 of the CrPC (Section 37 of BNSS), bail can be granted in non-bailable offenses if the court is satisfied that the accused is not guilty and will not flee justice. For offenses punishable with life imprisonment or death, bail requires the court to have reasonable grounds to believe the accused is not guilty.",
+    "source_chunks": [
+      "Section 37 of the Bharatiya Nagarik Suraksha Sanhita, 2023 deals with bail in non-bailable offences. The court shall not deny bail unless it has reasons to believe that the accused is guilty..."
+    ],
+    "document_name": "BNSS_2023_Section_37.txt"
+  },
+  {
+    "id": "TC_025",
+    "category": "criminal law",
+    "question": "What constitutes the offense of kidnapping under the IPC?",
+    "ground_truth_answer": "Under Section 359 of the IPC (Section 137 of BNS, 2023), kidnapping means unlawfully taking or inducing a minor under 16 (male) or 18 (female), or a person of unsound mind, away from their lawful guardian. Types include kidnapping from India (Section 360) and kidnapping from lawful guardianship (Section 361).",
+    "source_chunks": [
+      "Section 359 of the Indian Penal Code defines kidnapping. Section 360 IPC deals with kidnapping from India, and Section 361 deals with kidnapping from lawful guardianship..."
+    ],
+    "document_name": "IPC_1860_Sections_359-361.txt"
+  },
+  {
+    "id": "TC_026",
+    "category": "procedural",
+    "question": "What is the procedure for conducting a Lok Adalat?",
+    "ground_truth_answer": "Under the Legal Services Authorities Act, 1987, Lok Adalats are organized to settle disputes amicably. The process includes: referring cases to Lok Adalat (suo motu or by parties), parties appearing before the bench, the bench helping parties negotiate, and if settlement is reached, it is recorded as a decree. Decisions are binding and have the force of a civil court decree.",
+    "source_chunks": [
+      "Section 19 of the Legal Services Authorities Act, 1987 provides that every Lok Adalat shall have the authority to determine and arrive at a settlement between the parties..."
+    ],
+    "document_name": "Legal_Services_Authorities_Act_1987.txt"
+  },
+  {
+    "id": "TC_027",
+    "category": "procedural",
+    "question": "How does the Land Acquisition Act, 2013 protect land owners?",
+    "ground_truth_answer": "Under the Right to Fair Compensation and Transparency in Land Acquisition Act, 2013, land owners receive market value plus 100% solatium, plus replacement value for assets, plus transaction costs. Section 30 provides for resettlement and rehabilitation. The Act requires social impact assessment, consent of 80% for private projects and 70% for public-private projects.",
+    "source_chunks": [
+      "Section 26 of the Right to Fair Compensation and Transparency in Land Acquisition Act, 2013 states that the market value shall be determined based on the average of the sale prices of land in similar type..."
+    ],
+    "document_name": "Land_Acquisition_Act_2013.txt"
+  },
+  {
+    "id": "TC_028",
+    "category": "factual",
+    "question": "What are the requirements for registering a property under the Registration Act, 1908?",
+    "ground_truth_answer": "Under Section 17 of the Registration Act, 1908, documents that require compulsory registration include: immovable property transfers worth over Rs. 100, leases above one year, gifts of immovable property, and trust declarations. Registration is done at the sub-registrar's office with witnesses, payment of stamp duty, and submission of documents.",
+    "source_chunks": [
+      "Section 17 of the Registration Act, 1908 specifies documents that require compulsory registration, including all immovable property transfers, leases for over one year, and gifts of immovable property..."
+    ],
+    "document_name": "Registration_Act_1908.txt"
+  },
+  {
+    "id": "TC_029",
+    "category": "factual",
+    "question": "What is the process for filing a Motor Accident Claims Petition?",
+    "ground_truth_answer": "Under the Motor Vehicles Act, 1988, a claims petition can be filed by the victim or legal heirs at the Claims Tribunal. The petition must include: accident details, injuries sustained, claim amount with justification, and supporting documents (FIR, medical records, income proof). The tribunal can award compensation for death, permanent disability, or temporary disability.",
+    "source_chunks": [
+      "Section 166 of the Motor Vehicles Act, 1988 states that any person claiming compensation in respect of a motor accident may submit an application to the Claims Tribunal..."
+    ],
+    "document_name": "Motor_Vehicles_Act_1988_Section_166.txt"
+  },
+  {
+    "id": "TC_030",
+    "category": "analytical",
+    "question": "What are the constitutional protections against arbitrary arrest under Article 21?",
+    "ground_truth_answer": "Article 21 of the Constitution guarantees protection of life and personal liberty. Supreme Court rulings in Maneka Gandhi v. Union of India and DK Basu v. State of West Bengal established that arbitrary arrest violates Article 21. Requirements include: arrest only with reasonable suspicion, informing grounds of arrest, right to legal counsel, medical examination, and procedural safeguards under Articles 22(1) and 22(2).",
+    "source_chunks": [
+      "Article 21 of the Constitution of India states that no person shall be deprived of his life or personal liberty except according to procedure established by law. The Supreme Court has interpreted this to require procedural fairness..."
+    ],
+    "document_name": "Constitution_Article_21.txt"
+  },
+  {
+    "id": "TC_031",
+    "category": "analytical",
+    "question": "How has the doctrine of basic structure evolved in Indian constitutional law?",
+    "ground_truth_answer": "The basic structure doctrine, established in Kesavananda Bharati v. State of Kerala (1973), holds that the Parliament cannot amend the basic features of the Constitution. The Supreme Court identified basic structure elements including: supremacy of constitution, republican and democratic form of government, secularism, federalism, separation of powers, and fundamental rights. This limits parliamentary power to amend core constitutional principles.",
+    "source_chunks": [
+      "Kesavananda Bharati v. State of Kerala (1973) established the basic structure doctrine, holding that Parliament cannot amend the basic features of the Constitution..."
+    ],
+    "document_name": "Kesavananda_Bharati_case.txt"
+  },
+  {
+    "id": "TC_032",
+    "category": "civil law",
+    "question": "What are the provisions for injunction under the Specific Relief Act?",
+    "ground_truth_answer": "Under Section 37 of the Specific Relief Act, 1963, an injunction is a judicial order restraining a person from doing or continuing an act that would be unlawful or cause injury. Types include: temporary injunction (during pendency of suit) and perpetual injunction (after trial). Courts grant injunctions when monetary damages are inadequate and the balance of convenience favors the plaintiff.",
+    "source_chunks": [
+      "Section 37 of the Specific Relief Act, 1963 defines injunction as a judicial order restraining any person from doing or continuing an act which would be unlawful or causing injury..."
+    ],
+    "document_name": "Specific_Relief_Act_1963_Section_37.txt"
+  },
+  {
+    "id": "TC_033",
+    "category": "criminal law",
+    "question": "What is the punishment for offenses related to dowry under the Dowry Prohibition Act?",
+    "ground_truth_answer": "Under Section 3 of the Dowry Prohibition Act, 1961, giving or taking dowry is punishable with imprisonment up to 5 years and fine up to Rs. 15,000. Section 4 prohibits demanding dowry. Section 8B requires wedding institutions to maintain records. Dowry deaths under Section 304B IPC carry minimum 7 years imprisonment.",
+    "source_chunks": [
+      "Section 3 of the Dowry Prohibition Act, 1961 states that if any person gives or takes dowry, he shall be punishable with imprisonment for a term which shall not be less than five years..."
+    ],
+    "document_name": "Dowry_Prohibition_Act_1961.txt"
+  },
+  {
+    "id": "TC_034",
+    "category": "civil law",
+    "question": "What is the law governing rent and eviction of tenants?",
+    "ground_truth_answer": "Rent matters are governed by state-specific Rent Control Acts. Generally, a tenant cannot be evicted without sufficient cause such as: default in rent for specified period, tenant using premises for illegal purposes, requiring premises for self-occupation, or structural changes requiring vacation. Tenants have protection against arbitrary eviction and right to fair rent.",
+    "source_chunks": [
+      "Rent Control Acts in various states provide that a landlord cannot evict a tenant without sufficient cause, which may include non-payment of rent, unauthorized use, or requirement for personal occupation..."
+    ],
+    "document_name": "Rent_Control_Act.txt"
+  },
+  {
+    "id": "TC_035",
+    "category": "procedural",
+    "question": "What is the limitation period for filing a civil suit?",
+    "ground_truth_answer": "The Limitation Act, 1963 prescribes different periods: 3 years for most civil suits, 12 years for suits for recovery of immovable property, 30 years for adverse possession claims, and 30 years for mortgaged property suits. For contracts, the limitation period is 3 years from the date of breach. Legal disability (minority, unsoundness of mind) extends the period.",
+    "source_chunks": [
+      "Article 113 of the Limitation Act, 1963 provides that the period of limitation for civil suits is three years from the time when the right to sue accrues..."
+    ],
+    "document_name": "Limitation_Act_1963.txt"
+  },
+  {
+    "id": "TC_036",
+    "category": "analytical",
+    "question": "What are the principles of natural justice in administrative law?",
+    "ground_truth_answer": "Natural justice principles include: (1) Audi alteram partem (no person can be condemned unheard) - right to be heard before adverse action; (2) Nemo judex in causa sua (no one can be judge in their own cause) - rule against bias; (3) Reasoned decision - authority must give reasons for decisions. These principles apply to quasi-judicial functions and ensure fairness in administrative actions.",
+    "source_chunks": [
+      "The principles of natural justice include audi alteram partem (hear the other side) and nemo judex in causa sua (no one should be a judge in their own cause)..."
+    ],
+    "document_name": "Natural_Justice_Principles.txt"
+  },
+  {
+    "id": "TC_037",
+    "category": "factual",
+    "question": "What is the procedure for arbitration under the Arbitration Act?",
+    "ground_truth_answer": "Under the Arbitration and Conciliation Act, 1996, parties can agree to arbitrate disputes. The procedure includes: filing a notice of arbitration, constituting the arbitral tribunal, stating the case, hearings, and the award. The tribunal must make an award within 12 months (extendable by 6 months). Courts have limited intervention, and awards are enforceable like decrees.",
+    "source_chunks": [
+      "Section 21 of the Arbitration and Conciliation Act, 1996 states that the arbitral proceedings shall commence when the respondent receives the notice of arbitration..."
+    ],
+    "document_name": "Arbitration_Act_1996.txt"
+  }
+]
