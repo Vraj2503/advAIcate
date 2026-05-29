@@ -4,7 +4,11 @@ import logging
 import requests
 from jose import jwt, jwk, JWTError
 from jose.utils import base64url_decode
-from flask import request, jsonify
+try:
+    from flask import request, jsonify
+except ImportError:
+    request = None
+    jsonify = None
 from functools import wraps
 
 # ======================
@@ -262,11 +266,13 @@ def enforce_session_ownership(session_id: str, user_id: str, session_manager):
     """
     session = session_manager.get_session(session_id)
     if not session:
-        return None, (jsonify({"error": "Session not found"}), 404)
+        error_resp = jsonify({"error": "Session not found"}) if jsonify is not None else {"error": "Session not found"}
+        return None, (error_resp, 404)
     if session.get("user_id") != user_id:
         logger.warning(
             "Session ownership violation: user %s attempted to access session %s",
             user_id, session_id
         )
-        return None, (jsonify({"error": "Access denied"}), 403)
+        error_resp = jsonify({"error": "Access denied"}) if jsonify is not None else {"error": "Access denied"}
+        return None, (error_resp, 403)
     return session, None

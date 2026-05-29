@@ -49,7 +49,9 @@ class BaseManager:
             if not url or not key:
                 raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
 
-            BaseManager._client = create_client(url, key)
+            from supabase.client import ClientOptions
+            options = ClientOptions(postgrest_client_timeout=30)
+            BaseManager._client = create_client(url, key, options=options)
 
         self.client = BaseManager._client
         self.storage_bucket = STORAGE_BUCKET
