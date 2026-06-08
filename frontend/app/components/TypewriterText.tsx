@@ -1,56 +1,103 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface TypewriterTextProps {
   text: string;
   speed?: number;
   onComplete?: () => void;
   onCharacterAdded?: () => void;
+  isStopped?: boolean;
   className?: string;
 }
 
-export const TypewriterText = ({ 
-  text, 
-  speed = 30, 
-  onComplete, 
+export const TypewriterText = ({
+  text,
+  speed = 5,
+  onComplete,
   onCharacterAdded,
-  className = "" 
+  isStopped = false,
+  className = "",
 }: TypewriterTextProps) => {
-  const [displayedText, setDisplayedText] = useState("");
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [displayedLength, setDisplayedLength] = useState(0);
+  const [finished, setFinished] = useState(false);
   const { theme } = useTheme();
   const isLight = theme === "light";
 
-  useEffect(() => {
-    if (currentIndex < text.length) {
-      const timer = setTimeout(() => {
-        setDisplayedText(prev => prev + text[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
-        
-        if (onCharacterAdded) {
-          onCharacterAdded();
-        }
-      }, speed);
+  const workerRef = useRef<Worker | null>(null);
+  const textRef = useRef(text);
+  const lengthRef = useRef(0);
+  const completedRef = useRef(false);
 
-      return () => clearTimeout(timer);
-    } else if (onComplete) {
-      onComplete();
+  // Keep textRef in sync
+  textRef.current = text;
+
+  // ---- Create / destroy worker ----
+  useEffect(() => {
+    const w = new Worker("/timerWorker.js");
+    workerRef.current = w;
+
+    w.onmessage = () => {
+      if (completedRef.current) return;
+
+      const nextLen = lengthRef.current + 1;
+      if (nextLen <= textRef.current.length) {
+        lengthRef.current = nextLen;
+        setDisplayedLength(nextLen);
+        onCharacterAdded?.();
+      }
+
+      if (nextLen >= textRef.current.length) {
+        completedRef.current = true;
+        w.postMessage({ cmd: "stop" });
+        setFinished(true);
+        onComplete?.();
+      }
+    };
+
+    w.postMessage({ cmd: "start", interval: speed });
+
+    return () => {
+      w.postMessage({ cmd: "stop" });
+      w.terminate();
+      workerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, speed]);
+
+  // ---- Handle stop ----
+  useEffect(() => {
+    if (isStopped && !completedRef.current) {
+      completedRef.current = true;
+      workerRef.current?.postMessage({ cmd: "stop" });
+      lengthRef.current = textRef.current.length;
+      setDisplayedLength(textRef.current.length);
+      setFinished(true);
+      onComplete?.();
     }
-  }, [currentIndex, text, speed, onComplete, onCharacterAdded]);
+  }, [isStopped, onComplete]);
 
   // Reset when text changes
   useEffect(() => {
-    setDisplayedText("");
-    setCurrentIndex(0);
+    lengthRef.current = 0;
+    completedRef.current = false;
+    setDisplayedLength(0);
+    setFinished(false);
   }, [text]);
+
+  const displayedText = text.slice(0, displayedLength);
 
   return (
     <div className={className}>
-      <div className={`whitespace-pre-line leading-relaxed ${
-        isLight ? 'text-slate-700' : 'text-slate-300'
-      }`}>
-        {displayedText}
+      <div className={`bot-markdown leading-relaxed ${isLight ? "light" : "dark"}`}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {displayedText}
+        </ReactMarkdown>
+        {!finished && (
+          <span className="typewriter-cursor" />
+        )}
       </div>
     </div>
   );

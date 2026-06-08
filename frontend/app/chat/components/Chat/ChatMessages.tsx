@@ -8,10 +8,11 @@ interface ChatMessagesProps {
   isTyping: boolean;
   onAnimationComplete: (messageId: string | number) => void;
   onCharacterAdded: () => void;
+  onEditMessage?: (messageId: string | number, newContent: string) => void;
 }
 
 const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
-  ({ messages, isTyping, onAnimationComplete, onCharacterAdded }, ref) => {
+  ({ messages, isTyping, onAnimationComplete, onCharacterAdded, onEditMessage }, ref) => {
     const { theme } = useTheme();
 
     useEffect(() => {
@@ -32,6 +33,7 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
               message={message}
               onAnimationComplete={onAnimationComplete}
               onCharacterAdded={onCharacterAdded}
+              onEditMessage={onEditMessage}
             />
           ))}
 
