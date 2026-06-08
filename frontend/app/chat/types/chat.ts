@@ -9,6 +9,7 @@ export interface Message {
   content: string;
   timestamp: string;
   isAnimating?: boolean;
+  isStopped?: boolean;
   files?: MessageFile[];
 }
 

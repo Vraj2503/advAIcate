@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Scale } from "lucide-react";
@@ -29,6 +29,9 @@ const Chat = () => {
   const [chatTitle, setChatTitle] = useState<string | null>(null);
 
   const hasMessages = messages.length > 0;
+
+  // Track whether any bot message is currently animating (for the stop button)
+  const isAnyAnimating = messages.some((m) => m.role === "bot" && m.isAnimating && !m.isStopped);
 
   const { uploadedFiles, handleFileUpload, removeFile, clearFiles } = useFileUpload({
     onSuccess: () => {},
@@ -178,6 +181,7 @@ const Chat = () => {
           content: data.response,
           timestamp: new Date().toLocaleTimeString(),
           isAnimating: true,
+          isStopped: false,
         },
       ]);
     } catch {
@@ -191,6 +195,7 @@ const Chat = () => {
             "Sorry, something went wrong while contacting the server. Please try again.",
           timestamp: new Date().toLocaleTimeString(),
           isAnimating: true,
+          isStopped: false,
         },
       ]);
     }
@@ -210,6 +215,38 @@ const Chat = () => {
         chatContainerRef.current.scrollHeight;
     }
   };
+
+  /* ==================== STOP RESPONSE ==================== */
+
+  const handleStopResponse = useCallback(() => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.role === "bot" && m.isAnimating && !m.isStopped
+          ? { ...m, isStopped: true }
+          : m
+      )
+    );
+  }, []);
+
+  /* ==================== EDIT MESSAGE ==================== */
+
+  const handleEditMessage = useCallback(
+    (messageId: string | number, newContent: string) => {
+      // Find the index of the message being edited
+      const idx = messages.findIndex((m) => m.id === messageId);
+      if (idx === -1) return;
+
+      // Remove this message and everything after it
+      setMessages((prev) => prev.slice(0, idx));
+
+      // Re-send with the new content (slight delay so state settles)
+      setTimeout(() => {
+        handleSendMessage(newContent);
+      }, 50);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [messages, session, sessionId, chatTitle, uploadedFiles]
+  );
 
   const handleNewChat = () => {
     setMessages([]);
@@ -342,6 +379,8 @@ const Chat = () => {
                 uploadedFiles={uploadedFiles}
                 onRemoveFile={removeFile}
                 isTyping={isTyping}
+                isAnimating={isAnyAnimating}
+                onStopResponse={handleStopResponse}
                 centered
               />
             </div>
@@ -383,6 +422,7 @@ const Chat = () => {
               isTyping={isTyping}
               onAnimationComplete={handleAnimationComplete}
               onCharacterAdded={handleCharacterAdded}
+              onEditMessage={handleEditMessage}
             />
             <div className="flex-shrink-0">
               <ChatInput
@@ -391,6 +431,8 @@ const Chat = () => {
                 uploadedFiles={uploadedFiles}
                 onRemoveFile={removeFile}
                 isTyping={isTyping}
+                isAnimating={isAnyAnimating}
+                onStopResponse={handleStopResponse}
               />
             </div>
           </>

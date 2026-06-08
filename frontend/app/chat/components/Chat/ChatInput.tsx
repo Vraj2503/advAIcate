@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Paperclip } from "lucide-react";
+import { Send, Paperclip, Square } from "lucide-react";
 import { FilePreviewBar } from "./FilePreviewBar";
 import { useTheme } from "../../../contexts/ThemeContext";
 
@@ -10,6 +10,10 @@ interface ChatInputProps {
   uploadedFiles: File[];
   onRemoveFile: (index: number) => void;
   isTyping: boolean;
+  /** True when a bot response is being animated (typewriter running) */
+  isAnimating?: boolean;
+  /** Called when the user clicks the Stop button */
+  onStopResponse?: () => void;
   /** When true, renders the larger centered variant (empty state) */
   centered?: boolean;
 }
@@ -20,6 +24,8 @@ export const ChatInput = ({
   uploadedFiles, 
   onRemoveFile, 
   isTyping,
+  isAnimating = false,
+  onStopResponse,
   centered = false,
 }: ChatInputProps) => {
   const [inputValue, setInputValue] = useState("");
@@ -45,6 +51,8 @@ export const ChatInput = ({
     onFileUpload(e.target.files);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  const showStop = isAnimating && !isTyping;
 
   return (
     <div className={centered ? "" : "px-4 pb-4 pt-2 max-w-3xl mx-auto w-full"}>
@@ -90,13 +98,13 @@ export const ChatInput = ({
           />
         </div>
 
-        {/* Bottom Row - Upload and Send Buttons */}
+        {/* Bottom Row - Upload and Send/Stop Buttons */}
         <div className="flex justify-between items-center">
           {/* Upload Button - Left */}
           <Button
             variant="ghost"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isTyping}
+            disabled={isTyping || isAnimating}
             className={`
               rounded-full w-11 h-11 p-0 flex-shrink-0
               ${theme === 'light' 
@@ -109,24 +117,40 @@ export const ChatInput = ({
             <Paperclip className="w-[22px] h-[22px]" />
           </Button>
 
-          {/* Send Button - Right */}
-          <Button
-            onClick={handleSubmit}
-            disabled={!inputValue.trim() || isTyping}
-            className={`
-              rounded-full w-11 h-11 p-0 transition-all duration-200 flex items-center justify-center flex-shrink-0
-              ${!inputValue.trim() || isTyping
-                ? theme === 'light' 
-                  ? 'bg-slate-100 text-slate-400' 
-                  : 'bg-slate-700 text-slate-500'
-                : theme === 'light'
-                  ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-md' 
-                  : 'bg-orange-600 hover:bg-orange-700 text-white shadow-md'
-              }
-            `}
-          >
-            <Send className="w-[22px] h-[22px]" />
-          </Button>
+          {/* Send or Stop Button - Right */}
+          {showStop ? (
+            <Button
+              onClick={onStopResponse}
+              className={`
+                rounded-full w-11 h-11 p-0 transition-all duration-200 flex items-center justify-center flex-shrink-0
+                ${theme === 'light'
+                  ? 'bg-red-600 hover:bg-red-700 text-white shadow-md'
+                  : 'bg-red-600 hover:bg-red-700 text-white shadow-md'
+                }
+              `}
+              title="Stop response"
+            >
+              <Square className="w-4 h-4 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={!inputValue.trim() || isTyping}
+              className={`
+                rounded-full w-11 h-11 p-0 transition-all duration-200 flex items-center justify-center flex-shrink-0
+                ${!inputValue.trim() || isTyping
+                  ? theme === 'light' 
+                    ? 'bg-slate-100 text-slate-400' 
+                    : 'bg-slate-700 text-slate-500'
+                  : theme === 'light'
+                    ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-md' 
+                    : 'bg-orange-600 hover:bg-orange-700 text-white shadow-md'
+                }
+              `}
+            >
+              <Send className="w-[22px] h-[22px]" />
+            </Button>
+          )}
         </div>
       </div>
       
