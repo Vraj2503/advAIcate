@@ -5,7 +5,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Message } from "../../types/chat";
 import { TypewriterText } from "../../../components/TypewriterText";
-import { useTheme } from "../../../contexts/ThemeContext";
 
 interface MessageBubbleProps {
   message: Message;
@@ -20,8 +19,6 @@ export const MessageBubble = ({
   onCharacterAdded,
   onEditMessage,
 }: MessageBubbleProps) => {
-  const { theme } = useTheme();
-  const isLight = theme === "light";
   const isUser = message.role === "user";
 
   // ---- Edit state ----
@@ -65,44 +62,47 @@ export const MessageBubble = ({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`group flex items-start space-x-3 ${
-          isUser ? "flex-row-reverse space-x-reverse" : ""
-        } max-w-[85%]`}
+        className={`group flex items-start gap-4 ${
+          isUser ? "flex-row-reverse" : ""
+        } max-w-[90%]`}
       >
         {/* Avatar */}
         <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-            isUser
-              ? isLight
-                ? "bg-slate-800"
-                : "bg-orange-600"
-              : isLight
-              ? "bg-gradient-to-br from-orange-100 to-amber-100"
-              : "bg-slate-700"
-          }`}
+          className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+          style={{
+            background: isUser ? "var(--sealing-wax)" : "var(--parchment)",
+            border: isUser ? "none" : "1px solid var(--doc-border)",
+          }}
         >
           {isUser ? (
-            <User className="w-4 h-4 text-white" />
+            /* Quill pen SVG for user */
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 2C15 7 9 9 4 21c3-1 6-1 9-1 3-5 5-9 7-18Z" />
+              <path d="M4 21c3-2 8-4 12-7" />
+            </svg>
           ) : (
-            <Bot
-              className={`w-4 h-4 ${
-                isLight ? "text-orange-600" : "text-orange-400"
-              }`}
-            />
+            /* Scales of justice SVG for bot */
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sealing-wax)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v20" />
+              <path d="M2 7h20" />
+              <path d="M5 7l-2 9h6L7 7" />
+              <path d="M17 7l-2 9h6l-2-9" />
+            </svg>
           )}
         </div>
 
         {/* Content */}
         <div
-          className={`rounded-2xl px-4 py-3 ${
-            isUser
-              ? isLight
-                ? "bg-slate-800 text-white"
-                : "bg-orange-600 text-white"
-              : isLight
-              ? "bg-white border border-slate-200 shadow-sm"
-              : "bg-slate-800/60 border border-slate-700/50"
-          }`}
+          className="rounded-2xl px-5 py-4"
+          style={{
+            background: isUser ? "var(--sealing-wax)" : "var(--parchment)",
+            color: isUser ? "#fff" : "var(--parchment-text)",
+            border: isUser ? "none" : "1px solid var(--doc-border)",
+            boxShadow: isUser
+              ? "0 2px 12px var(--sealing-wax-glow)"
+              : "0 2px 12px rgba(0,0,0,0.2)",
+            fontFamily: "var(--font-typewriter)",
+          }}
         >
           {/* ---- Editing mode ---- */}
           {isUser && isEditing ? (
@@ -112,33 +112,27 @@ export const MessageBubble = ({
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 onKeyDown={handleEditKeyDown}
-                className={`w-full min-h-[60px] max-h-[200px] p-2 rounded-lg resize-none text-sm focus:outline-none ${
-                  isLight
-                    ? "bg-slate-700 text-white placeholder:text-slate-400"
-                    : "bg-orange-700/60 text-white placeholder:text-orange-200"
-                }`}
+                className="w-full min-h-[60px] max-h-[200px] p-3 rounded-lg resize-none text-sm focus:outline-none"
+                style={{
+                  background: "rgba(0,0,0,0.2)",
+                  color: "#fff",
+                }}
                 rows={2}
               />
               <div className="flex items-center gap-2 justify-end">
                 <button
                   onClick={handleCancelEdit}
-                  className={`p-1.5 rounded-lg transition-colors ${
-                    isLight
-                      ? "hover:bg-slate-600 text-slate-300"
-                      : "hover:bg-orange-700 text-orange-200"
-                  }`}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: "rgba(255,255,255,0.7)" }}
                   title="Cancel"
                 >
                   <X className="w-4 h-4" />
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  className={`p-1.5 rounded-lg transition-colors ${
-                    isLight
-                      ? "hover:bg-slate-600 text-green-400"
-                      : "hover:bg-orange-700 text-green-300"
-                  }`}
-                  title="Save & resend"
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: "#86efac" }}
+                  title="Save &amp; resend"
                 >
                   <Check className="w-4 h-4" />
                 </button>
@@ -160,11 +154,7 @@ export const MessageBubble = ({
                 <div className="text-sm leading-relaxed">
                   {message.role === "bot" ? (
                     /* Formatted markdown for completed bot messages */
-                    <div
-                      className={`bot-markdown ${
-                        isLight ? "light" : "dark"
-                      }`}
-                    >
+                    <div className="bot-markdown light">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {message.content}
                       </ReactMarkdown>
@@ -182,9 +172,8 @@ export const MessageBubble = ({
           {/* File attachments on user messages */}
           {isUser && message.files && message.files.length > 0 && (
             <div
-              className={`flex flex-wrap gap-1.5 mt-2 pt-2 border-t ${
-                isLight ? "border-slate-700" : "border-orange-500/40"
-              }`}
+              className="flex flex-wrap gap-1.5 mt-3 pt-3"
+              style={{ borderTop: "1px solid rgba(255,255,255,0.2)" }}
             >
               {message.files.map((f, i) => {
                 const ext = f.name.split(".").pop()?.toUpperCase() || "";
@@ -195,11 +184,8 @@ export const MessageBubble = ({
                 return (
                   <div
                     key={i}
-                    className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs ${
-                      isLight
-                        ? "bg-slate-700/50 text-slate-200"
-                        : "bg-orange-700/40 text-orange-100"
-                    }`}
+                    className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs"
+                    style={{ background: "rgba(0,0,0,0.2)", color: "#fff" }}
                   >
                     <FileText className="w-3.5 h-3.5 flex-shrink-0 opacity-70" />
                     <span className="truncate max-w-[120px]">{f.name}</span>
@@ -217,11 +203,8 @@ export const MessageBubble = ({
         {isUser && !isEditing && !message.isAnimating && (
           <button
             onClick={() => setIsEditing(true)}
-            className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg self-center flex-shrink-0 ${
-              isLight
-                ? "hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-                : "hover:bg-slate-700 text-slate-500 hover:text-slate-300"
-            }`}
+            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg self-center flex-shrink-0"
+            style={{ color: "var(--parchment-muted)" }}
             title="Edit message"
           >
             <Pencil className="w-3.5 h-3.5" />

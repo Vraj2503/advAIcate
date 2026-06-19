@@ -1,29 +1,334 @@
 @import "tailwindcss";
 
+/* ==================== Design Tokens ==================== */
+/* Single dark theme — light parchment document on dark desk */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Page (dark desk/surface) */
+  --page-bg: #1a1a1a;
+  --page-fg: #D4CFC4;
+
+  /* Parchment (light document paper) */
+  --parchment: #faebd7d9;
+  --parchment-text: #1A1A1A;
+  --parchment-muted: #6B6560;
+
+  /* Structural */
+  --onyx: #1A1A1A;
+  --onyx-soft: #2C2C2C;
+  --onyx-muted: #4A4A4A;
+
+  /* Accent */
+  --sealing-wax: #D95C14;
+  --sealing-wax-glow: rgba(217, 92, 20, 0.45);
+  --sealing-wax-subtle: rgba(217, 92, 20, 0.12);
+
+  /* Semantics */
+  --background: var(--page-bg);
+  --foreground: var(--page-fg);
+
+  /* Document */
+  --doc-bg: var(--parchment);
+  --doc-text: var(--parchment-text);
+  --doc-muted: var(--parchment-muted);
+  --doc-border: #D4CFC4;
+  --doc-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-parchment: var(--parchment);
+  --color-onyx: var(--onyx);
+  --color-sealing-wax: var(--sealing-wax);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ==================== Base Styles ==================== */
+/* Typography vars live on body because Next.js font CSS variables are injected here */
+
+body {
+  --font-serif: var(--font-playfair), 'Playfair Display', 'Georgia', serif;
+  --font-typewriter: var(--font-courier-prime), 'Courier Prime', 'Courier New', monospace;
+  --font-ui: var(--font-inter), 'Inter', system-ui, sans-serif;
+
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+}
+
+/* ==================== Redaction Bar System ==================== */
+/* Dark onyx bars on the light parchment document — same as original light theme */
+
+.redaction-bar {
+  position: relative;
+  display: inline;
+  cursor: default;
+  background: var(--onyx);
+  padding: 1px 5px;
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition:
+    background-color 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    box-shadow 200ms ease;
+}
+
+/* Hover / revealed — dissolve */
+.redaction-bar:hover,
+.redaction-bar.revealed {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Brief orange flash before dissolve */
+@keyframes bar-flash {
+  0% {
+    background: var(--onyx);
+  }
+
+  40% {
+    background: var(--sealing-wax);
+    box-shadow: 0 0 16px var(--sealing-wax-glow);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.redaction-bar:hover {
+  animation: bar-flash 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
+
+.redaction-bar.revealed {
+  background: transparent;
+  animation: none;
+}
+
+/* The text underneath — hidden by default */
+.redaction-bar>span {
+  opacity: 0;
+  transition: opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94) 80ms;
+  color: var(--sealing-wax);
+  font-weight: 700;
+}
+
+.redaction-bar:hover>span,
+.redaction-bar.revealed>span {
+  opacity: 1;
+}
+
+/* ==================== CTA Redaction Bar ==================== */
+
+.redaction-bar-cta {
+  cursor: pointer !important;
+  text-decoration: none !important;
+  background: var(--sealing-wax) !important;
+  box-shadow: 0 0 14px var(--sealing-wax-glow);
+}
+
+.redaction-bar-cta>span {
+  opacity: 0;
+  transition: opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94) 80ms;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.redaction-bar-cta:hover,
+.redaction-bar-cta.revealed {
+  background: transparent !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.redaction-bar-cta:hover>span,
+.redaction-bar-cta.revealed>span {
+  opacity: 1;
+  color: var(--sealing-wax);
+}
+
+/* ==================== Mobile: All Revealed ==================== */
+
+@media (max-width: 768px) {
+  .redaction-bar {
+    background: transparent !important;
+    box-shadow: none !important;
+    animation: none !important;
+    padding: 0;
+  }
+
+  .redaction-bar>span {
+    opacity: 1;
+    color: var(--doc-text);
+    font-weight: inherit;
+  }
+
+  .redaction-bar-cta {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0;
+  }
+
+  .redaction-bar-cta>span {
+    opacity: 1;
+    color: var(--sealing-wax);
+  }
+}
+
+/* ==================== Page Animations ==================== */
+
+@keyframes page-entry {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stamp-fade {
+  from {
+    opacity: 0;
+    transform: rotate(-18deg) scale(0.8);
+  }
+
+  to {
+    opacity: 0.06;
+    transform: rotate(-18deg) scale(1);
+  }
+}
+
+.animate-page-entry {
+  animation: page-entry 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-stamp {
+  animation: stamp-fade 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s forwards;
+  opacity: 0;
+}
+
+/* Staggered line reveal */
+.doc-line {
+  opacity: 0;
+  animation: page-entry 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* ==================== Header ==================== */
+
+.parchment-header {
+  background: transparent;
+  border-bottom: none;
+}
+
+.parchment-header-icon {
+  color: #8A8478;
+  transition: color 0.2s ease;
+}
+
+.parchment-header-icon:hover {
+  color: var(--sealing-wax);
+}
+
+/* Sign-in link */
+.signin-link {
+  color: #8A8478;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #3A3530;
+}
+
+.signin-link:hover {
+  color: var(--sealing-wax);
+  border-color: var(--sealing-wax);
+}
+
+/* ==================== Document Container ==================== */
+/* The paper itself — stays LIGHT parchment to match the best vibe */
+
+.document-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2.5rem 3rem;
+  background: var(--doc-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: var(--doc-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Paper texture lines */
+.document-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(transparent,
+      transparent 31px,
+      rgba(0, 0, 0, 0.03) 31px,
+      rgba(0, 0, 0, 0.03) 32px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Left margin rule line */
+.document-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 52px;
+  width: 1px;
+  background: rgba(217, 92, 20, 0.15);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (max-width: 768px) {
+  .document-container {
+    padding: 1.5rem 1.25rem;
+    margin: 0 0.75rem;
+    border-left: none;
+    border-right: none;
+  }
+
+  .document-container::after {
+    left: 20px;
+  }
+}
+
+/* ==================== Scrollbar (document themed) ==================== */
+
+.parchment-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.parchment-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.parchment-scroll::-webkit-scrollbar-thumb {
+  background: #3A3530;
+  border-radius: 3px;
+}
+
+.parchment-scroll::-webkit-scrollbar-thumb:hover {
+  background: #5A5550;
+}
+
+.parchment-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #3A3530 transparent;
+}
+
+/* ==================== Existing Styles (Chat, etc.) ==================== */
 
 @keyframes fade-in {
   from {
@@ -103,9 +408,17 @@ summary {
   line-height: 1.3;
 }
 
-.bot-markdown h1 { font-size: 1.25rem; }
-.bot-markdown h2 { font-size: 1.125rem; }
-.bot-markdown h3 { font-size: 1rem; }
+.bot-markdown h1 {
+  font-size: 1.25rem;
+}
+
+.bot-markdown h2 {
+  font-size: 1.125rem;
+}
+
+.bot-markdown h3 {
+  font-size: 1rem;
+}
 
 .bot-markdown p {
   margin-bottom: 0.5rem;
@@ -142,7 +455,7 @@ summary {
   line-height: 1.625;
 }
 
-.bot-markdown li > p {
+.bot-markdown li>p {
   margin-bottom: 0.125rem;
 }
 
@@ -331,6 +644,138 @@ summary {
 }
 
 @keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ==================== Hover Effects ==================== */
+
+/* Card glow on hover */
+@keyframes card-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 20px 2px rgba(249, 115, 22, 0.15);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+}
+
+.card-hover-glow:hover {
+  animation: card-glow 1.5s ease-in-out;
+}
+
+/* Footer link underline slide */
+.link-underline-slide {
+  position: relative;
+  display: inline-block;
+}
+
+.link-underline-slide::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+
+.link-underline-slide:hover::after {
+  width: 100%;
+}
+
+/* Badge float effect */
+.badge-hover-float {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.badge-hover-float:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px -5px rgba(249, 115, 22, 0.2);
+}
+
+/* ==================== Signature CTA Button ==================== */
+
+.signature-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border: 1.5px solid var(--onyx);
+  background-color: transparent;
+  color: var(--onyx);
+  font-family: var(--font-typewriter);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none !important;
+  cursor: pointer;
+  transition: all 220ms ease;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.signature-cta-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1px solid transparent;
+  transition: border-color 220ms ease;
+}
+
+.signature-cta-btn:hover {
+  background-color: var(--onyx);
+  color: var(--doc-bg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.signature-cta-btn:hover::after {
+  border-color: rgba(26, 26, 26, 0.2);
+}
+
+@media (max-width: 768px) {
+  .signature-cta-btn {
+    padding: 6px 14px;
+    font-size: 11px;
+    margin-bottom: 12px;
+  }
+}
+
+/* ==================== Photocopy Elements ==================== */
+
+.document-container-toner {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 15% 10%, rgba(0, 0, 0, 0.025) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 35% at 90% 85%, rgba(0, 0, 0, 0.03) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(0, 0, 0, 0.02) 0%, transparent 70%);
+}
+
+.document-container-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
 }

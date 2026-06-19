@@ -12,10 +12,3 @@ export interface Message {
   isStopped?: boolean;
   files?: MessageFile[];
 }
-
-export interface Toast {
-  id: number;
-  type: 'success' | 'error' | 'warning';
-  title: string;
-  message: string;
-}

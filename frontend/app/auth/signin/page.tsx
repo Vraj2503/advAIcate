@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Scale, Zap, Mail, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "../../contexts/ThemeContext";
-import ThemeToggle from "../../components/ThemeToggle";
+
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 // Loading component for Suspense fallback
@@ -29,7 +28,7 @@ function SignInForm() {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
   const searchParams = useSearchParams();
-  const { theme } = useTheme();
+
 
   useEffect(() => {
     // Check if user is already signed in
@@ -105,67 +104,35 @@ function SignInForm() {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const isLight = theme === 'light';
-
-  const inputClass = `w-full px-4 py-3 rounded-xl border outline-none transition-all ${
-    isLight
-      ? "bg-orange-50 border-orange-200 text-slate-900 focus:border-orange-400"
-      : "bg-slate-700 border-slate-600 text-slate-100 focus:border-orange-500"
-  }`;
+  const inputClass = "w-full px-4 py-3 rounded-xl border outline-none transition-all bg-[var(--onyx-soft)] border-[var(--onyx-muted)] text-[var(--foreground)] focus:border-[var(--sealing-wax)]";
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${
-      isLight 
-        ? 'bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50' 
-        : 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
-    }`}>
-      {/* Theme Toggle - Top Right */}
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
 
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-12">
           <Link href="/" className="inline-flex items-center space-x-3 group">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              isLight ? 'bg-orange-600' : 'bg-blue-600'
-            }`}>
-              <Scale className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--onyx-soft)' }}>
+              <Scale className="w-5 h-5" style={{ color: 'var(--sealing-wax)' }} />
             </div>
-            <span className={`text-xl font-bold tracking-tight font-serif ${
-              isLight 
-                ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-transparent bg-clip-text' 
-                : 'text-slate-100'
-            }`}>
+            <span className="text-xl font-bold tracking-tight" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)' }}>
               advAIcate
             </span>
           </Link>
         </div>
 
         {/* Sign In Card */}
-        <div className={`p-8 rounded-2xl shadow-xl border ${
-          isLight 
-            ? 'bg-white border-orange-100' 
-            : 'bg-slate-800/90 backdrop-blur-sm border-slate-700'
-        }`}>
+        <div className="p-8 rounded-2xl shadow-xl border" style={{ background: 'var(--onyx-soft)', borderColor: 'var(--onyx-muted)' }}>
           <div className="text-center mb-8">
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mb-6 ${
-              isLight 
-                ? 'bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-200 text-orange-800' 
-                : 'bg-gradient-to-r from-orange-950/60 to-amber-950/60 border border-orange-700/50 text-orange-300'
-            }`}>
+            <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mb-6" style={{ background: 'var(--sealing-wax-subtle)', border: '1px solid var(--sealing-wax)', color: 'var(--sealing-wax)' }}>
               <Zap className="w-3 h-3 mr-1" />
               Powered by Advanced AI
             </div>
-            <h1 className={`text-2xl font-light mb-2 ${
-              isLight ? 'text-slate-900' : 'text-slate-100'
-            }`}>
+            <h1 className="text-2xl font-light mb-2" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)' }}>
               Welcome back
             </h1>
-            <p className={`font-light ${
-              isLight ? 'text-slate-600' : 'text-slate-400'
-            }`}>
+            <p className="font-light" style={{ color: 'var(--parchment-muted)' }}>
               Sign in to access your legal AI assistant
             </p>
           </div>
@@ -188,16 +155,11 @@ function SignInForm() {
           <Button
             onClick={handleGoogleSignIn}
             disabled={isGoogleLoading || isLoading}
-            className={`w-full font-medium py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 shadow-sm mb-6 ${
-              isLight 
-                ? 'bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 hover:border-orange-300' 
-                : 'bg-slate-700 border border-slate-600 text-slate-100 hover:bg-slate-600 hover:border-orange-500'
-            }`}
+            className="w-full font-medium py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 shadow-sm mb-6"
+            style={{ background: 'var(--onyx-muted)', border: '1px solid var(--onyx-muted)', color: 'var(--foreground)' }}
           >
             {isGoogleLoading ? (
-              <div className={`w-5 h-5 border-2 border-t-transparent rounded-full animate-spin ${
-                isLight ? 'border-orange-400' : 'border-orange-500'
-              }`} />
+              <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--sealing-wax)', borderTopColor: 'transparent' }} />
             ) : (
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -218,9 +180,7 @@ function SignInForm() {
                 />
               </svg>
             )}
-            <span className={`font-medium ${
-              isLight ? 'text-slate-900' : 'text-slate-100'
-            }`}>
+            <span className="font-medium" style={{ color: 'var(--foreground)' }}>
               {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
             </span>
           </Button>
@@ -269,33 +229,25 @@ function SignInForm() {
             <Button
               type="submit"
               disabled={isLoading || isGoogleLoading}
-              className={`w-full py-3 rounded-xl font-medium transition-all ${
-                isLight 
-                  ? "bg-orange-600 hover:bg-orange-700" 
-                  : "bg-blue-600 hover:bg-blue-700"
-              } text-white disabled:opacity-50`}
+              className="w-full py-3 rounded-xl font-medium transition-all text-white disabled:opacity-50"
+              style={{ background: 'var(--sealing-wax)' }}
             >
               {isLoading ? "Signing in..." : "Sign in with Email"}
             </Button>
           </form>
 
-          <p className={`text-xs text-center mt-6 font-light ${
-            isLight ? 'text-slate-500' : 'text-slate-400'
-          }`}>
+          <p className="text-xs text-center mt-6 font-light" style={{ color: 'var(--parchment-muted)' }}>
             Don&apos;t have an account?{" "}
             <Link
               href="/auth/signup"
-              className={`underline transition-colors ${
-                isLight ? "hover:text-orange-600" : "hover:text-orange-400"
-              }`}
+              className="underline transition-colors"
+              style={{ color: 'var(--sealing-wax)' }}
             >
               Sign up
             </Link>
           </p>
 
-          <p className={`text-xs text-center mt-2 font-light ${
-            isLight ? 'text-slate-500' : 'text-slate-400'
-          }`}>
+          <p className="text-xs text-center mt-2 font-light" style={{ color: 'var(--parchment-muted)' }}>
             Privacy-first • Secure • No data sharing
           </p>
         </div>
@@ -304,9 +256,8 @@ function SignInForm() {
         <div className="text-center mt-8">
           <Link 
             href="/" 
-            className={`text-sm transition-colors font-light ${
-              isLight ? 'text-slate-500 hover:text-orange-600' : 'text-slate-400 hover:text-orange-400'
-            }`}
+            className="text-sm transition-colors font-light"
+            style={{ color: 'var(--parchment-muted)' }}
           >
             ← Back to Home
           </Link>

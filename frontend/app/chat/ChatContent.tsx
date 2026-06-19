@@ -3,21 +3,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Scale } from "lucide-react";
 
 import Sidebar from "./components/Sidebar";
 import { ChatMessages } from "./components/Chat/ChatMessages";
 import { ChatInput } from "./components/Chat/ChatInput";
 import { useFileUpload } from "./hooks/useFileUpload";
-import { useTheme } from "../contexts/ThemeContext";
 import { Message } from "./types/chat";
 import { apiFetch } from "@/lib/api";
 
 const Chat = () => {
   const router = useRouter();
-  const { theme } = useTheme();
   const { data: session, status } = useSession();
-  const isLight = theme === "light";
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const hasRedirected = useRef(false);
@@ -34,8 +30,8 @@ const Chat = () => {
   const isAnyAnimating = messages.some((m) => m.role === "bot" && m.isAnimating && !m.isStopped);
 
   const { uploadedFiles, handleFileUpload, removeFile, clearFiles } = useFileUpload({
-    onSuccess: () => {},
-    onError: () => {},
+    onSuccess: () => { },
+    onError: () => { },
   });
 
   /* ==================== AUTH ==================== */
@@ -293,16 +289,17 @@ const Chat = () => {
 
   if (loadingAuth) {
     return (
-      <div className={`h-screen flex items-center justify-center ${
-        isLight
-          ? "bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50"
-          : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
-      }`}>
-        <div className={`w-10 h-10 border-3 rounded-full animate-spin ${
-          isLight
-            ? "border-orange-200 border-t-orange-600"
-            : "border-slate-700 border-t-blue-500"
-        }`} />
+      <div
+        className="h-screen flex items-center justify-center"
+        style={{ background: "var(--background)" }}
+      >
+        <div
+          className="w-10 h-10 rounded-full animate-spin"
+          style={{
+            border: "3px solid var(--onyx-soft)",
+            borderTopColor: "var(--sealing-wax)",
+          }}
+        />
       </div>
     );
   }
@@ -312,11 +309,10 @@ const Chat = () => {
   /* ==================== RENDER ==================== */
 
   return (
-    <div className={`h-screen flex flex-col overflow-hidden ${
-      isLight
-        ? "bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50"
-        : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
-    }`}>
+    <div
+      className="h-screen flex flex-col overflow-hidden"
+      style={{ background: "var(--background)" }}
+    >
       {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -331,14 +327,15 @@ const Chat = () => {
       <div className="flex-1 flex flex-col min-h-0">
         {/* Top bar with chat title */}
         {hasMessages && (
-          <div className={`flex items-center justify-center py-3 px-4 flex-shrink-0 ${
-            isLight ? "border-b border-slate-100" : "border-b border-slate-800"
-          }`}>
-            {/* Spacer for sidebar toggle */}
+          <div
+            className="flex items-center justify-center py-3 px-4 flex-shrink-0"
+            style={{ borderBottom: "1px solid var(--onyx-soft)" }}
+          >
             <div className="w-10" />
-            <h1 className={`text-sm font-medium truncate max-w-md text-center flex-1 ${
-              isLight ? "text-slate-600" : "text-slate-400"
-            }`}>
+            <h1
+              className="text-sm font-medium truncate max-w-md text-center flex-1"
+              style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
+            >
               {chatTitle || "New Chat"}
             </h1>
             <div className="w-10" />
@@ -347,32 +344,38 @@ const Chat = () => {
 
         {/* Chat area: centered when empty, full-page when active */}
         {!hasMessages ? (
-          /* ========== EMPTY STATE — centered like Claude ========== */
+          /* ========== EMPTY STATE ========== */
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <div className="max-w-2xl w-full text-center mb-8">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 ${
-                isLight
-                  ? "bg-gradient-to-br from-orange-100 to-amber-100"
-                  : "bg-gradient-to-br from-slate-700 to-slate-600"
-              }`}>
-                <Scale className={`w-7 h-7 ${
-                  isLight ? "text-orange-600" : "text-orange-400"
-                }`} />
+            <div className="max-w-3xl w-full text-center mb-8">
+              {/* Scales of Justice SVG */}
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+                style={{ background: "var(--onyx-soft)" }}
+              >
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--sealing-wax)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v20" />
+                  <path d="M2 7h20" />
+                  <path d="M5 7l-2 9h6L7 7" />
+                  <path d="M17 7l-2 9h6l-2-9" />
+                  <circle cx="12" cy="2" r="1" fill="var(--sealing-wax)" />
+                </svg>
               </div>
-              <h1 className={`text-3xl sm:text-4xl font-light mb-3 ${
-                isLight ? "text-slate-900" : "text-slate-100"
-              }`}>
+              <h1
+                className="text-3xl sm:text-4xl font-light mb-3"
+                style={{ color: "var(--foreground)", fontFamily: "var(--font-serif)" }}
+              >
                 What can I help with?
               </h1>
-              <p className={`text-base font-light ${
-                isLight ? "text-slate-500" : "text-slate-400"
-              }`}>
+              <p
+                className="text-base font-light"
+                style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
+              >
                 Ask me anything about legal matters — contracts, compliance, case law, and more.
               </p>
             </div>
 
             {/* Centered input */}
-            <div className="w-full max-w-2xl">
+            <div className="w-full max-w-3xl">
               <ChatInput
                 onSendMessage={handleSendMessage}
                 onFileUpload={handleFileUpload}
@@ -386,7 +389,7 @@ const Chat = () => {
             </div>
 
             {/* Suggestion chips */}
-            <div className="flex flex-wrap justify-center gap-2 mt-6 max-w-2xl">
+            <div className="flex flex-wrap justify-center gap-2 mt-6 max-w-3xl">
               {[
                 "Review my contract terms",
                 "Explain tenant rights",
@@ -396,20 +399,31 @@ const Chat = () => {
                 <button
                   key={suggestion}
                   onClick={() => handleSendMessage(suggestion)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                    isLight
-                      ? "bg-white border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-700 hover:bg-orange-50 shadow-sm"
-                      : "bg-slate-800 border border-slate-700 text-slate-300 hover:border-slate-600 hover:text-slate-100 hover:bg-slate-700/80"
-                  }`}
+                  className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200"
+                  style={{
+                    background: "var(--onyx-soft)",
+                    border: "1px solid var(--onyx-muted)",
+                    color: "var(--foreground)",
+                    fontFamily: "var(--font-typewriter)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--sealing-wax)";
+                    e.currentTarget.style.color = "var(--sealing-wax)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--onyx-muted)";
+                    e.currentTarget.style.color = "var(--foreground)";
+                  }}
                 >
                   {suggestion}
                 </button>
               ))}
             </div>
 
-            <p className={`text-xs mt-8 ${
-              isLight ? "text-slate-400" : "text-slate-500"
-            }`}>
+            <p
+              className="text-xs mt-8"
+              style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
+            >
               This AI provides general information only — not legal advice.
             </p>
           </div>

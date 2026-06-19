@@ -4,19 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  MessageSquare,
-  User,
-  LogOut,
-  Home,
-  Scale,
-  Loader2,
-} from "lucide-react";
-import ThemeToggle from "../../components/ThemeToggle";
-import { useTheme } from "../../contexts/ThemeContext";
+import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 interface ChatSession {
@@ -45,12 +33,10 @@ export default function Sidebar({
   onSelectSession,
 }: SidebarProps) {
   const { data: session } = useSession();
-  const { theme } = useTheme();
   const [imageError, setImageError] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
-  const isLight = theme === "light";
   const hasUser = !!session?.user;
   const isFetchingRef = useRef(false);
 
@@ -113,14 +99,20 @@ export default function Sidebar({
       {!isOpen && (
         <button
           onClick={onToggle}
-          className={`fixed top-4 left-4 z-50 p-2 rounded-lg transition-all duration-200
-            ${isLight
-              ? "bg-white/80 hover:bg-orange-50 text-slate-600 shadow-sm border border-slate-200"
-              : "bg-slate-800/80 hover:bg-slate-700 text-slate-300 shadow-sm border border-slate-700"
-            } backdrop-blur-sm`}
+          className="fixed top-4 left-4 z-50 p-2.5 rounded-lg transition-all duration-200 backdrop-blur-sm"
+          style={{
+            background: "var(--onyx-soft)",
+            border: "1px solid var(--onyx-muted)",
+            color: "var(--foreground)",
+          }}
           aria-label="Open sidebar"
         >
-          <PanelLeftOpen className="w-5 h-5" />
+          {/* Hamburger menu SVG */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
         </button>
       )}
 
@@ -129,33 +121,48 @@ export default function Sidebar({
         className={`fixed top-0 left-0 z-50 h-full flex flex-col transition-transform duration-300 ease-in-out
           w-72
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
-          ${isLight
-            ? "bg-white/95 border-r border-slate-200"
-            : "bg-slate-900/95 border-r border-slate-700/60"
-          } backdrop-blur-xl`}
+          backdrop-blur-xl`}
+        style={{
+          background: "var(--background)",
+          borderRight: "1px solid var(--onyx-soft)",
+        }}
       >
         {/* Top section */}
-        <div className={`flex items-center justify-between p-4 border-b ${
-          isLight ? "border-slate-100" : "border-slate-800"
-        }`}>
+        <div
+          className="flex items-center justify-between p-4"
+          style={{ borderBottom: "1px solid var(--onyx-soft)" }}
+        >
           <Link href="/" className="flex items-center space-x-2">
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLight ? "bg-orange-600" : "bg-blue-600"}`}>
-              <Scale className="w-4 h-4 text-white" />
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "var(--onyx-soft)" }}
+            >
+              {/* Scales SVG */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sealing-wax)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v20" />
+                <path d="M2 7h20" />
+                <path d="M5 7l-2 9h6L7 7" />
+                <path d="M17 7l-2 9h6l-2-9" />
+              </svg>
             </div>
-            <span className={`text-base font-mono font-bold ${isLight ? "text-slate-900" : "text-slate-100"}`}>
+            <span
+              className="text-base font-bold"
+              style={{ color: "var(--foreground)", fontFamily: "var(--font-serif)" }}
+            >
               advAIcate
             </span>
           </Link>
           <button
             onClick={onToggle}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isLight
-                ? "hover:bg-slate-100 text-slate-500"
-                : "hover:bg-slate-800 text-slate-400"
-            }`}
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: "var(--parchment-muted)" }}
             aria-label="Close sidebar"
           >
-            <PanelLeftClose className="w-5 h-5" />
+            {/* Close X SVG */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
@@ -163,35 +170,44 @@ export default function Sidebar({
         <div className="p-3">
           <button
             onClick={onNewChat}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
-              ${isLight
-                ? "bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200"
-                : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-              }`}
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
+            style={{
+              background: "var(--onyx-soft)",
+              border: "1px solid var(--onyx-muted)",
+              color: "var(--foreground)",
+              fontFamily: "var(--font-typewriter)",
+            }}
           >
-            <Plus className="w-4 h-4" />
+            {/* Plus SVG */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
             <span>New Chat</span>
           </button>
         </div>
 
         {/* Chat history */}
         <div className="flex-1 overflow-y-auto px-3 py-1 chat-scrollbar-minimal">
-          <p className={`text-xs font-medium uppercase tracking-wider px-3 mb-2 ${
-            isLight ? "text-slate-400" : "text-slate-500"
-          }`}>
+          <p
+            className="text-xs font-medium uppercase tracking-wider px-3 mb-2"
+            style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
+          >
             Recent
           </p>
 
           {isLoadingSessions ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className={`w-5 h-5 animate-spin ${
-                isLight ? "text-slate-400" : "text-slate-500"
-              }`} />
+              <Loader2
+                className="w-5 h-5 animate-spin"
+                style={{ color: "var(--parchment-muted)" }}
+              />
             </div>
           ) : chatSessions.length === 0 && !chatTitle ? (
-            <p className={`text-xs px-3 py-4 text-center ${
-              isLight ? "text-slate-400" : "text-slate-500"
-            }`}>
+            <p
+              className="text-xs px-3 py-4 text-center"
+              style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
+            >
               No chat history yet
             </p>
           ) : (
@@ -202,27 +218,31 @@ export default function Sidebar({
                   <button
                     key={s.id}
                     onClick={() => onSelectSession(s.id, s.title)}
-                    className={`w-full flex items-start space-x-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors duration-150 group ${
-                      isActive
-                        ? isLight
-                          ? "bg-orange-50 text-orange-800 border border-orange-200"
-                          : "bg-slate-800 text-slate-100 border border-slate-600"
-                        : isLight
-                          ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
-                    }`}
+                    className="w-full flex items-start space-x-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors duration-150 group"
+                    style={{
+                      background: isActive ? "var(--onyx-soft)" : "transparent",
+                      border: isActive ? "1px solid var(--onyx-muted)" : "1px solid transparent",
+                      color: isActive ? "var(--sealing-wax)" : "var(--parchment-muted)",
+                      fontFamily: "var(--font-typewriter)",
+                    }}
                     title={s.title}
                   >
-                    <MessageSquare className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                      isActive
-                        ? isLight ? "text-orange-600" : "text-orange-400"
-                        : "opacity-50 group-hover:opacity-80"
-                    }`} />
+                    {/* Message icon SVG */}
+                    <svg
+                      width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke={isActive ? "var(--sealing-wax)" : "currentColor"}
+                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                      className="flex-shrink-0 mt-0.5"
+                      style={{ opacity: isActive ? 1 : 0.5 }}
+                    >
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
                     <div className="flex-1 min-w-0">
                       <span className="truncate block">{s.title}</span>
-                      <span className={`text-[11px] mt-0.5 block ${
-                        isLight ? "text-slate-400" : "text-slate-500"
-                      }`}>
+                      <span
+                        className="text-[11px] mt-0.5 block"
+                        style={{ color: "var(--parchment-muted)" }}
+                      >
                         {formatRelativeTime(s.updated_at)}
                       </span>
                     </div>
@@ -233,36 +253,31 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Bottom section - User info and Theme toggle */}
-        <div className={`p-3 border-t space-y-2 ${
-          isLight ? "border-slate-100" : "border-slate-800"
-        }`}>
+        {/* Bottom section - User info */}
+        <div
+          className="p-3 space-y-2"
+          style={{ borderTop: "1px solid var(--onyx-soft)" }}
+        >
           {/* Home link */}
           <Link
             href="/"
-            className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              isLight
-                ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-            }`}
+            className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
           >
-            <Home className="w-4 h-4" />
+            {/* Home SVG */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
             <span>Home</span>
           </Link>
 
-          {/* Theme toggle row */}
-          <div className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${
-            isLight ? "text-slate-600" : "text-slate-400"
-          }`}>
-            <span className="text-sm font-medium">Theme</span>
-            <ThemeToggle />
-          </div>
-
           {/* User info */}
           {session?.user && (
-            <div className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${
-              isLight ? "bg-slate-50" : "bg-slate-800/60"
-            }`}>
+            <div
+              className="flex items-center justify-between px-3 py-2.5 rounded-lg"
+              style={{ background: "var(--onyx-soft)" }}
+            >
               <div className="flex items-center space-x-3 min-w-0">
                 {session.user.image && !imageError ? (
                   <Image
@@ -275,28 +290,35 @@ export default function Sidebar({
                     unoptimized
                   />
                 ) : (
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    isLight ? "bg-orange-600" : "bg-blue-600"
-                  }`}>
-                    <User className="w-3.5 h-3.5 text-white" />
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: "var(--sealing-wax)" }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
                   </div>
                 )}
-                <span className={`text-sm font-medium truncate ${
-                  isLight ? "text-slate-700" : "text-slate-300"
-                }`}>
+                <span
+                  className="text-sm font-medium truncate"
+                  style={{ color: "var(--foreground)" }}
+                >
                   {session.user.name?.split(" ")[0] || "User"}
                 </span>
               </div>
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
-                  isLight
-                    ? "hover:bg-slate-200 text-slate-500"
-                    : "hover:bg-slate-700 text-slate-400"
-                }`}
+                className="p-1.5 rounded-lg transition-colors flex-shrink-0"
+                style={{ color: "var(--parchment-muted)" }}
                 aria-label="Sign out"
               >
-                <LogOut className="w-4 h-4" />
+                {/* Logout SVG */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
               </button>
             </div>
           )}

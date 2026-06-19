@@ -360,4 +360,4 @@ class SessionManager(BaseManager):
             logger.debug("[SESSION_MGR] Message count for %s: %d (via fallback)", session_id, new_count)
             return new_count
         except Exception:
-            return 0
+            return 0

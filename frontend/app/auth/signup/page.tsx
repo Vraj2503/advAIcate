@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Scale, Zap, Mail } from "lucide-react";
-import { useTheme } from "../../contexts/ThemeContext";
-import ThemeToggle from "../../components/ThemeToggle";
+
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function SignUp() {
@@ -16,8 +15,7 @@ export default function SignUp() {
 
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
-  const { theme } = useTheme();
-  const isLight = theme === "light";
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -49,68 +47,38 @@ export default function SignUp() {
     }
   };
 
-  const inputClass = `w-full px-4 py-3 rounded-xl border outline-none transition-all ${
-    isLight
-      ? "bg-orange-50 border-orange-200 text-slate-900 focus:border-orange-400"
-      : "bg-slate-700 border-slate-600 text-slate-100 focus:border-orange-500"
-  }`;
+  const inputClass = "w-full px-4 py-3 rounded-xl border outline-none transition-all bg-[var(--onyx-soft)] border-[var(--onyx-muted)] text-[var(--foreground)] focus:border-[var(--sealing-wax)]";
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${
-      isLight 
-        ? "bg-gradient-to-br from-orange-50 to-yellow-50" 
-        : "bg-gradient-to-br from-slate-900 to-slate-800"
-    }`}>
-      {/* Theme Toggle */}
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
 
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center space-x-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              isLight ? "bg-orange-600" : "bg-blue-600"
-            }`}>
-              <Scale className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--onyx-soft)' }}>
+              <Scale className="w-5 h-5" style={{ color: 'var(--sealing-wax)' }} />
             </div>
-            <span className={`text-xl font-bold ${
-              isLight 
-                ? "bg-gradient-to-r from-orange-600 to-amber-600 text-transparent bg-clip-text" 
-                : "text-slate-100"
-            }`}>
+            <span className="text-xl font-bold" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)' }}>
               advAIcate
             </span>
           </Link>
         </div>
 
         {/* Main Card */}
-        <div className={`p-6 rounded-2xl shadow-xl border ${
-          isLight 
-            ? "bg-white border-orange-100" 
-            : "bg-slate-800/90 border-slate-700"
-        }`}>
+        <div className="p-6 rounded-2xl shadow-xl border" style={{ background: 'var(--onyx-soft)', borderColor: 'var(--onyx-muted)' }}>
           {/* Header */}
           <div className="text-center mb-6">
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs mb-4 ${
-              isLight 
-                ? "bg-orange-100 text-orange-800" 
-                : "bg-orange-950/60 text-orange-300"
-            }`}>
+            <div className="inline-flex items-center px-3 py-1 rounded-full text-xs mb-4" style={{ background: 'var(--sealing-wax-subtle)', color: 'var(--sealing-wax)' }}>
               <Zap className="w-3 h-3 mr-1" />
               AI-Powered Legal Assistant
             </div>
             
-            <h1 className={`text-2xl font-light mb-2 ${
-              isLight ? "text-slate-900" : "text-slate-100"
-            }`}>
+            <h1 className="text-2xl font-light mb-2" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)' }}>
               {step === "details" ? "Create Account" : "Check Your Email"}
             </h1>
             
-            <p className={`text-sm ${
-              isLight ? "text-slate-600" : "text-slate-400"
-            }`}>
+            <p className="text-sm" style={{ color: 'var(--parchment-muted)' }}>
               {step === "details" 
                 ? "Join thousands using AI for legal guidance"
                 : `We sent a magic link to ${form.email}`
@@ -152,11 +120,8 @@ export default function SignUp() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className={`w-full py-3 rounded-xl font-medium transition-all ${
-                    isLight 
-                      ? "bg-orange-600 hover:bg-orange-700" 
-                      : "bg-blue-600 hover:bg-blue-700"
-                  } text-white disabled:opacity-50`}
+                  className="w-full py-3 rounded-xl font-medium transition-all text-white disabled:opacity-50"
+                  style={{ background: 'var(--sealing-wax)' }}
                 >
                   {isLoading ? "Sending link..." : "Send Magic Link"}
                 </Button>
@@ -173,11 +138,8 @@ export default function SignUp() {
               <Button
                 onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin + "/auth/callback" } })}
                 disabled={isLoading}
-                className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
-                  isLight
-                    ? "bg-white border border-slate-300 text-slate-900 hover:bg-slate-50"
-                    : "bg-slate-700 border border-slate-600 text-slate-100 hover:bg-slate-600"
-                }`}
+                className="w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all"
+                style={{ background: 'var(--onyx-muted)', border: '1px solid var(--onyx-muted)', color: 'var(--foreground)' }}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -189,15 +151,12 @@ export default function SignUp() {
               </Button>
 
               {/* Sign In Link */}
-              <p className={`text-xs text-center mt-4 ${
-                isLight ? "text-slate-500" : "text-slate-400"
-              }`}>
+              <p className="text-xs text-center mt-4" style={{ color: 'var(--parchment-muted)' }}>
                 Already have an account?{" "}
                 <Link
                   href="/auth/signin"
-                  className={`underline transition-colors ${
-                    isLight ? "hover:text-orange-600" : "hover:text-orange-400"
-                  }`}
+                  className="underline transition-colors"
+                  style={{ color: 'var(--sealing-wax)' }}
                 >
                   Sign in
                 </Link>
@@ -207,13 +166,11 @@ export default function SignUp() {
             <>
               {/* Magic link sent confirmation */}
               <div className="text-center space-y-4">
-                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
-                  isLight ? "bg-orange-100" : "bg-orange-950/40"
-                }`}>
-                  <Mail className={`w-8 h-8 ${isLight ? "text-orange-600" : "text-orange-400"}`} />
+                <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--sealing-wax-subtle)' }}>
+                  <Mail className="w-8 h-8" style={{ color: 'var(--sealing-wax)' }} />
                 </div>
 
-                <p className={`text-sm ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                <p className="text-sm" style={{ color: 'var(--parchment-muted)' }}>
                   We sent a magic link to <strong>{form.email}</strong>. Click
                   the link in your inbox to continue.
                 </p>
@@ -223,11 +180,8 @@ export default function SignUp() {
                     setStep("details");
                     setError(null);
                   }}
-                  className={`text-sm transition-colors ${
-                    isLight
-                      ? "text-slate-600 hover:text-orange-600"
-                      : "text-slate-400 hover:text-orange-400"
-                  }`}
+                  className="text-sm transition-colors"
+                  style={{ color: 'var(--parchment-muted)' }}
                 >
                   ← Back to details
                 </button>
@@ -240,11 +194,8 @@ export default function SignUp() {
         <div className="text-center mt-6">
           <Link
             href="/"
-            className={`text-sm transition-colors ${
-              isLight 
-                ? "text-slate-500 hover:text-orange-600" 
-                : "text-slate-400 hover:text-orange-400"
-            }`}
+            className="text-sm transition-colors"
+            style={{ color: 'var(--parchment-muted)' }}
           >
             ← Back to Home
           </Link>

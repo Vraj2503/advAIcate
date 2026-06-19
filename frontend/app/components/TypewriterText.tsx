@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useTheme } from "../contexts/ThemeContext";
 
 interface TypewriterTextProps {
   text: string;
@@ -23,8 +22,7 @@ export const TypewriterText = ({
 }: TypewriterTextProps) => {
   const [displayedLength, setDisplayedLength] = useState(0);
   const [finished, setFinished] = useState(false);
-  const { theme } = useTheme();
-  const isLight = theme === "light";
+  const isLight = false; // dark-only theme
 
   const workerRef = useRef<Worker | null>(null);
   const textRef = useRef(text);
