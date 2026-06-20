@@ -7,8 +7,7 @@ import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Scale, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "../../contexts/ThemeContext";
-import ThemeToggle from "../../components/ThemeToggle";
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -24,8 +23,7 @@ export default function SetPassword() {
 
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
-  const { theme } = useTheme();
-  const isLight = theme === "light";
+
 
   // Guard: redirect if no Supabase session or password already set
   useEffect(() => {
@@ -100,11 +98,7 @@ export default function SetPassword() {
     }
   };
 
-  const inputClass = `w-full px-4 py-3 rounded-xl border outline-none transition-all ${
-    isLight
-      ? "bg-orange-50 border-orange-200 text-slate-900 focus:border-orange-400"
-      : "bg-slate-700 border-slate-600 text-slate-100 focus:border-orange-500"
-  }`;
+  const inputClass = "w-full px-4 py-3 rounded-xl border outline-none transition-all bg-[var(--onyx-soft)] border-[var(--onyx-muted)] text-[var(--foreground)] focus:border-[var(--sealing-wax)]";
 
   if (checking) {
     return (
@@ -116,61 +110,30 @@ export default function SetPassword() {
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center p-4 ${
-        isLight
-          ? "bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50"
-          : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
-      }`}
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'var(--background)' }}
     >
-      {/* Theme Toggle */}
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
 
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center space-x-3">
-            <div
-              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                isLight ? "bg-orange-600" : "bg-blue-600"
-              }`}
-            >
-              <Scale className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--onyx-soft)' }}>
+              <Scale className="w-5 h-5" style={{ color: 'var(--sealing-wax)' }} />
             </div>
-            <span
-              className={`text-xl font-bold ${
-                isLight
-                  ? "bg-gradient-to-r from-orange-600 to-amber-600 text-transparent bg-clip-text"
-                  : "text-slate-100"
-              }`}
-            >
+            <span className="text-xl font-bold" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)' }}>
               advAIcate
             </span>
           </Link>
         </div>
 
         {/* Card */}
-        <div
-          className={`p-8 rounded-2xl shadow-xl border ${
-            isLight
-              ? "bg-white border-orange-100"
-              : "bg-slate-800/90 backdrop-blur-sm border-slate-700"
-          }`}
-        >
+        <div className="p-8 rounded-2xl shadow-xl border" style={{ background: 'var(--onyx-soft)', borderColor: 'var(--onyx-muted)' }}>
           <div className="text-center mb-6">
-            <h1
-              className={`text-2xl font-light mb-2 ${
-                isLight ? "text-slate-900" : "text-slate-100"
-              }`}
-            >
+            <h1 className="text-2xl font-light mb-2" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)' }}>
               Set Your Password
             </h1>
-            <p
-              className={`text-sm ${
-                isLight ? "text-slate-600" : "text-slate-400"
-              }`}
-            >
+            <p className="text-sm" style={{ color: 'var(--parchment-muted)' }}>
               Create a password so you can sign in with email &amp; password
               next time.
             </p>
@@ -224,11 +187,8 @@ export default function SetPassword() {
             <Button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 rounded-xl font-medium transition-all ${
-                isLight
-                  ? "bg-orange-600 hover:bg-orange-700"
-                  : "bg-blue-600 hover:bg-blue-700"
-              } text-white disabled:opacity-50`}
+              className="w-full py-3 rounded-xl font-medium transition-all text-white disabled:opacity-50"
+              style={{ background: 'var(--sealing-wax)' }}
             >
               {isLoading ? "Saving..." : "Set Password & Continue"}
             </Button>
@@ -239,11 +199,8 @@ export default function SetPassword() {
         <div className="text-center mt-8">
           <Link
             href="/"
-            className={`text-sm transition-colors font-light ${
-              isLight
-                ? "text-slate-500 hover:text-orange-600"
-                : "text-slate-400 hover:text-orange-400"
-            }`}
+            className="text-sm transition-colors font-light"
+            style={{ color: 'var(--parchment-muted)' }}
           >
             ← Back to Home
           </Link>

@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    optimizeCss: true,
+    // optimizeCss requires 'critters' package — disabled
   },
 };
 
