@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Public routes that don't need Supabase session refresh
-const PUBLIC_ROUTES = ["/", "/aboutus", "/contactus", "/auth/signin", "/auth/signup"];
+const PUBLIC_ROUTES = ["/", "/aboutus", "/auth/signin", "/auth/signup"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -105,6 +105,41 @@ class SessionManager(BaseManager):
 
         return result.data[0] if result.data else None
 
+    def delete_session(self, session_id: str) -> bool:
+        """
+        Permanently delete a session and all related data.
+        Cascades: document_insights -> user_documents -> conversation_summaries -> messages -> chat_sessions
+        """
+        self._validate_session_id(session_id)
+
+        # Delete in dependency order to avoid FK violations
+        self.client.table("document_insights") \
+            .delete() \
+            .eq("session_id", session_id) \
+            .execute()
+
+        self.client.table("user_documents") \
+            .delete() \
+            .eq("session_id", session_id) \
+            .execute()
+
+        self.client.table("conversation_summaries") \
+            .delete() \
+            .eq("session_id", session_id) \
+            .execute()
+
+        self.client.table("messages") \
+            .delete() \
+            .eq("session_id", session_id) \
+            .execute()
+
+        self.client.table("chat_sessions") \
+            .delete() \
+            .eq("id", session_id) \
+            .execute()
+
+        return True
+
     def get_session_summary(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get the summary for a session."""
         self._validate_session_id(session_id)

@@ -120,7 +120,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
     max_age=86400,
@@ -420,6 +420,53 @@ async def get_sessions(
     except Exception as e:
         logger.exception("Get sessions error")
         raise HTTPException(status_code=500, detail="Failed to fetch sessions")
+
+
+@limiter.limit(RATE_LIMIT_SESSION_END)
+@app.delete("/api/sessions/{session_id}")
+async def delete_session(
+    request: Request,
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Permanently delete a session and all related data."""
+    enforce_session_ownership(session_id, current_user["id"], db)
+
+    try:
+        db.delete_session(session_id)
+        return {"success": True, "message": "Session deleted"}
+    except Exception as e:
+        logger.exception("Delete session error")
+        raise HTTPException(status_code=500, detail="Failed to delete session")
+
+
+@app.patch("/api/sessions/{session_id}")
+async def rename_session(
+    request: Request,
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Rename a chat session."""
+    enforce_session_ownership(session_id, current_user["id"], db)
+
+    try:
+        data = await request.json()
+        new_title = data.get("title", "").strip()
+        if not new_title:
+            raise HTTPException(status_code=400, detail="Title is required")
+
+        updated_session = db.update_session(session_id, title=new_title)
+        if not updated_session:
+            raise HTTPException(status_code=500, detail="Failed to update session title")
+
+        return {"success": True, "session": updated_session}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Rename session error")
+        raise HTTPException(status_code=500, detail="Failed to rename session")
 
 
 @app.get("/api/sessions/{session_id}/messages")

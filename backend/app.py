@@ -75,7 +75,7 @@ CORS(
     app,
     resources={r"/*": {"origins": allowed_origins}},
     supports_credentials=True,
-    methods=["GET", "POST", "OPTIONS"],
+    methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
 )
 
 
@@ -90,7 +90,7 @@ def add_cors_headers(response):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
         response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,DELETE,PATCH,OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = (
             request.headers.get(
                 "Access-Control-Request-Headers",

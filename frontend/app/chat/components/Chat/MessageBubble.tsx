@@ -95,7 +95,7 @@ export const MessageBubble = ({
         <div
           className="rounded-2xl px-5 py-4"
           style={{
-            background: isUser ? "var(--sealing-wax)" : "var(--parchment)",
+            background: isUser ? "var(--sealing-wax)" : "rgba(230, 215, 195, 0.9)",
             color: isUser ? "#fff" : "var(--parchment-text)",
             border: isUser ? "none" : "1px solid var(--doc-border)",
             boxShadow: isUser

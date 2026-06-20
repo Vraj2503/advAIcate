@@ -3,11 +3,18 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import DocumentHeader from "./components/DocumentHeader";
 import RedactedDocument from "./components/RedactedDocument";
+import UrlCleaner from "./components/UrlCleaner";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await getServerSession(authOptions);
+  const params = await searchParams;
 
-  if (session) {
+  // Redirect signed-in users to chat, unless they explicitly navigated here
+  if (session && !params.home) {
     redirect("/chat");
   }
 
@@ -18,6 +25,7 @@ export default async function HomePage() {
     >
       <DocumentHeader />
       <RedactedDocument />
+      <UrlCleaner />
     </div>
   );
 }

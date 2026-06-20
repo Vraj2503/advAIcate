@@ -22,7 +22,7 @@ export const TypewriterText = ({
 }: TypewriterTextProps) => {
   const [displayedLength, setDisplayedLength] = useState(0);
   const [finished, setFinished] = useState(false);
-  const isLight = false; // dark-only theme
+  const isLight = true; // Use light theme for parchment background
 
   const workerRef = useRef<Worker | null>(null);
   const textRef = useRef(text);
