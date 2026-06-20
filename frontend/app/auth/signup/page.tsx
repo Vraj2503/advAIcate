@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Scale, Zap, Mail } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import TermsModal from "./TermsModal";
 
 export default function SignUp() {
   const [form, setForm] = useState({ username: "", email: "" });
   const [step, setStep] = useState<"details" | "sent">("details");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
@@ -24,6 +27,11 @@ export default function SignUp() {
   /* ── Send magic-link via Supabase ── */
   const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!termsAccepted) {
+      setError("You must agree to the Terms and Conditions");
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
 
@@ -117,9 +125,33 @@ export default function SignUp() {
                   </div>
                 )}
 
+                {/* Terms Checkbox */}
+                <div className="flex items-start mt-4 mb-2">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="terms"
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-[var(--sealing-wax)] bg-[var(--onyx-soft)] border-[var(--onyx-muted)] cursor-pointer accent-[var(--sealing-wax)]"
+                    />
+                  </div>
+                  <label htmlFor="terms" className="ml-2 text-sm" style={{ color: 'var(--parchment-muted)' }}>
+                    I agree to the{" "}
+                    <button
+                      type="button"
+                      onClick={() => setIsTermsOpen(true)}
+                      className="underline transition-colors"
+                      style={{ color: 'var(--sealing-wax)' }}
+                    >
+                      Terms and Conditions
+                    </button>
+                  </label>
+                </div>
+
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !termsAccepted}
                   className="w-full py-3 rounded-xl font-medium transition-all text-white disabled:opacity-50"
                   style={{ background: 'var(--sealing-wax)' }}
                 >
@@ -137,7 +169,7 @@ export default function SignUp() {
               {/* Google Sign Up */}
               <Button
                 onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin + "/auth/callback" } })}
-                disabled={isLoading}
+                disabled={isLoading || !termsAccepted}
                 className="w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all"
                 style={{ background: 'var(--onyx-muted)', border: '1px solid var(--onyx-muted)', color: 'var(--foreground)' }}
               >
@@ -201,6 +233,8 @@ export default function SignUp() {
           </Link>
         </div>
       </div>
+
+      <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
     </div>
   );
 }

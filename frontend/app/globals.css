@@ -655,57 +655,7 @@ summary {
   }
 }
 
-/* ==================== Hover Effects ==================== */
 
-/* Card glow on hover */
-@keyframes card-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
-  }
-
-  50% {
-    box-shadow: 0 0 20px 2px rgba(249, 115, 22, 0.15);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
-  }
-}
-
-.card-hover-glow:hover {
-  animation: card-glow 1.5s ease-in-out;
-}
-
-/* Footer link underline slide */
-.link-underline-slide {
-  position: relative;
-  display: inline-block;
-}
-
-.link-underline-slide::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 1.5px;
-  background: currentColor;
-  transition: width 0.3s ease;
-}
-
-.link-underline-slide:hover::after {
-  width: 100%;
-}
-
-/* Badge float effect */
-.badge-hover-float {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.badge-hover-float:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 8px 25px -5px rgba(249, 115, 22, 0.2);
-}
 
 /* ==================== Signature CTA Button ==================== */
 
