@@ -1,0 +1,80 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches: [ "main" ]
+    # Only run CD if CI passed (implicit if you require status checks, but we keep it simple here)
+
+env:
+  REGISTRY: ghcr.io
+  FRONTEND_IMAGE_NAME: ${{ github.repository }}-frontend
+  BACKEND_IMAGE_NAME: ${{ github.repository }}-backend
+
+jobs:
+  build-and-push-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest,${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+
+    - name: Build and push Backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest,${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+
+  # Placeholder job for deploying to Kubernetes
+  # This requires a KUBECONFIG secret stored in GitHub Actions
+  deploy-to-k8s:
+    needs: build-and-push-images
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Deploy to Kubernetes
+      env:
+        KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
+      run: |
+        echo "$KUBECONFIG_CONTENT" > kubeconfig.yaml
+        export KUBECONFIG=kubeconfig.yaml
+        
+        # Deploy Secrets (make sure secrets.yaml exists and is configured)
+        # kubectl apply -f k8s/secrets.yaml
+        
+        # Deploy Services
+        kubectl apply -f k8s/frontend-service.yaml
+        kubectl apply -f k8s/backend-service.yaml
+        
+        # Deploy Deployments
+        # Update image tags to the newly built SHA
+        sed -i 's|image: .*frontend:latest|image: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}|' k8s/frontend-deployment.yaml
+        sed -i 's|image: .*backend:latest|image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}|' k8s/backend-deployment.yaml
+        
+        kubectl apply -f k8s/frontend-deployment.yaml
+        kubectl apply -f k8s/backend-deployment.yaml
+        
+        # Deploy Ingress
+        kubectl apply -f k8s/ingress.yaml
