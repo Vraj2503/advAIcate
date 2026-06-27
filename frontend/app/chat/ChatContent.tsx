@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Pencil, Check, X, Loader2 } from "lucide-react";
 
 import Sidebar from "./components/Sidebar";
 import { ChatMessages } from "./components/Chat/ChatMessages";
@@ -23,6 +24,11 @@ const Chat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatTitle, setChatTitle] = useState<string | null>(null);
+
+  // Rename states
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
 
   const hasMessages = messages.length > 0;
 
@@ -304,6 +310,46 @@ const Chat = () => {
     );
   }
 
+  /* ==================== RENAME ==================== */
+
+  const handleRenameSubmit = async () => {
+    if (!sessionId) return;
+    const trimmed = editTitleValue.trim();
+    if (!trimmed || trimmed === chatTitle) {
+      setIsEditingTitle(false);
+      return;
+    }
+
+    setIsRenaming(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await apiFetch(`${apiUrl}/api/sessions/${sessionId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: trimmed }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to rename session");
+      }
+
+      setChatTitle(trimmed);
+      setIsEditingTitle(false);
+    } catch (err) {
+      console.error("Error renaming chat:", err);
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleRenameSubmit();
+    } else if (e.key === "Escape") {
+      setIsEditingTitle(false);
+    }
+  };
+
   if (!session) return null;
 
   /* ==================== RENDER ==================== */
@@ -328,16 +374,62 @@ const Chat = () => {
         {/* Top bar with chat title */}
         {hasMessages && (
           <div
-            className="flex items-center justify-center py-3 px-4 flex-shrink-0"
+            className="flex items-center justify-center py-3 px-4 flex-shrink-0 group"
             style={{ borderBottom: "1px solid var(--onyx-soft)" }}
           >
             <div className="w-10" />
-            <h1
-              className="text-sm font-medium truncate max-w-md text-center flex-1"
-              style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
-            >
-              {chatTitle || "New Chat"}
-            </h1>
+            <div className="flex-1 flex justify-center items-center gap-2 max-w-md">
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2 w-full max-w-xs">
+                  <input
+                    type="text"
+                    value={editTitleValue}
+                    onChange={(e) => setEditTitleValue(e.target.value)}
+                    onKeyDown={handleEditKeyDown}
+                    autoFocus
+                    disabled={isRenaming}
+                    className="flex-1 bg-transparent text-sm font-medium text-center focus:outline-none border-b border-white/20 pb-0.5"
+                    style={{
+                      color: "var(--foreground)",
+                      fontFamily: "var(--font-typewriter)",
+                    }}
+                  />
+                  {isRenaming ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "var(--parchment-muted)" }} />
+                  ) : (
+                    <>
+                      <button onClick={handleRenameSubmit} className="p-1 hover:bg-white/5 rounded">
+                        <Check className="w-3.5 h-3.5 text-green-400" />
+                      </button>
+                      <button onClick={() => setIsEditingTitle(false)} className="p-1 hover:bg-white/5 rounded">
+                        <X className="w-3.5 h-3.5 text-red-400" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <h1
+                    className="text-sm font-medium truncate text-center"
+                    style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
+                  >
+                    {chatTitle || "New Chat"}
+                  </h1>
+                  {sessionId && (
+                    <button
+                      onClick={() => {
+                        setEditTitleValue(chatTitle || "");
+                        setIsEditingTitle(true);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/5 rounded"
+                      title="Rename Chat"
+                    >
+                      <Pencil className="w-3.5 h-3.5" style={{ color: "var(--parchment-muted)" }} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
             <div className="w-10" />
           </div>
         )}

@@ -60,6 +60,9 @@ class SupabaseManager:
     def get_completed_sessions(self, *a, **kw):
         return self._session.get_completed_sessions(*a, **kw)
 
+    def delete_session(self, *a, **kw):
+        return self._session.delete_session(*a, **kw)
+
     # Message management
     def save_message(self, *a, **kw):
         return self._message.save_message(*a, **kw)

@@ -36,6 +36,7 @@ export default function Sidebar({
   const [imageError, setImageError] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
 
   const hasUser = !!session?.user;
   const isFetchingRef = useRef(false);
@@ -69,6 +70,33 @@ export default function Sidebar({
     }
   }, [isOpen, hasUser, fetchSessions]);
 
+  // Delete a chat session
+  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation(); // Don't trigger the select handler
+    if (deletingSessionId) return; // Already deleting
+
+    setDeletingSessionId(sessionId);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await apiFetch(`${apiUrl}/api/sessions/${sessionId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setChatSessions((prev) => prev.filter((s) => s.id !== sessionId));
+        // If the deleted session was the current one, start a new chat
+        if (sessionId === currentSessionId) {
+          onNewChat();
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+    } finally {
+      setDeletingSessionId(null);
+    }
+  };
+
   // Format relative time for session timestamps
   const formatRelativeTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -99,7 +127,7 @@ export default function Sidebar({
       {!isOpen && (
         <button
           onClick={onToggle}
-          className="fixed top-4 left-4 z-50 p-2.5 rounded-lg transition-all duration-200 backdrop-blur-sm"
+          className="fixed top-4 left-4 z-50 p-2.5 rounded-lg transition-all duration-200 backdrop-blur-sm hover:brightness-125"
           style={{
             background: "var(--onyx-soft)",
             border: "1px solid var(--onyx-muted)",
@@ -132,7 +160,7 @@ export default function Sidebar({
           className="flex items-center justify-between p-4"
           style={{ borderBottom: "1px solid var(--onyx-soft)" }}
         >
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/?home=true" className="flex items-center space-x-2">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: "var(--onyx-soft)" }}
@@ -154,7 +182,7 @@ export default function Sidebar({
           </Link>
           <button
             onClick={onToggle}
-            className="p-1.5 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-all duration-200 hover:bg-[var(--onyx-soft)]"
             style={{ color: "var(--parchment-muted)" }}
             aria-label="Close sidebar"
           >
@@ -170,7 +198,7 @@ export default function Sidebar({
         <div className="p-3">
           <button
             onClick={onNewChat}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:brightness-125 hover:shadow-md"
             style={{
               background: "var(--onyx-soft)",
               border: "1px solid var(--onyx-muted)",
@@ -214,39 +242,91 @@ export default function Sidebar({
             <div className="space-y-1">
               {chatSessions.map((s) => {
                 const isActive = s.id === currentSessionId;
+                const isDeleting = s.id === deletingSessionId;
                 return (
-                  <button
+                  <div
                     key={s.id}
-                    onClick={() => onSelectSession(s.id, s.title)}
-                    className="w-full flex items-start space-x-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors duration-150 group"
-                    style={{
-                      background: isActive ? "var(--onyx-soft)" : "transparent",
-                      border: isActive ? "1px solid var(--onyx-muted)" : "1px solid transparent",
-                      color: isActive ? "var(--sealing-wax)" : "var(--parchment-muted)",
-                      fontFamily: "var(--font-typewriter)",
-                    }}
-                    title={s.title}
+                    className="relative group"
                   >
-                    {/* Message icon SVG */}
-                    <svg
-                      width="16" height="16" viewBox="0 0 24 24" fill="none"
-                      stroke={isActive ? "var(--sealing-wax)" : "currentColor"}
-                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                      className="flex-shrink-0 mt-0.5"
-                      style={{ opacity: isActive ? 1 : 0.5 }}
+                    <button
+                      onClick={() => onSelectSession(s.id, s.title)}
+                      className="w-full flex items-start space-x-3 px-3 py-2.5 rounded-lg text-sm text-left transition-all duration-150"
+                      style={{
+                        background: isActive ? "var(--onyx-soft)" : "transparent",
+                        border: isActive ? "1px solid var(--onyx-muted)" : "1px solid transparent",
+                        color: isActive ? "var(--sealing-wax)" : "var(--parchment-muted)",
+                        fontFamily: "var(--font-typewriter)",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = "var(--onyx-soft)";
+                          e.currentTarget.style.borderColor = "var(--onyx-muted)";
+                          e.currentTarget.style.color = "var(--foreground)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.borderColor = "transparent";
+                          e.currentTarget.style.color = "var(--parchment-muted)";
+                        }
+                      }}
+                      title={s.title}
                     >
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    <div className="flex-1 min-w-0">
-                      <span className="truncate block">{s.title}</span>
-                      <span
-                        className="text-[11px] mt-0.5 block"
-                        style={{ color: "var(--parchment-muted)" }}
+                      {/* Message icon SVG */}
+                      <svg
+                        width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke={isActive ? "var(--sealing-wax)" : "currentColor"}
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className="flex-shrink-0 mt-0.5"
+                        style={{ opacity: isActive ? 1 : 0.5 }}
                       >
-                        {formatRelativeTime(s.updated_at)}
-                      </span>
-                    </div>
-                  </button>
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      <div className="flex-1 min-w-0 pr-6">
+                        <span className="truncate block">{s.title}</span>
+                        <span
+                          className="text-[11px] mt-0.5 block"
+                          style={{ color: "var(--parchment-muted)" }}
+                        >
+                          {formatRelativeTime(s.updated_at)}
+                        </span>
+                      </div>
+                    </button>
+                    {/* Delete button — appears on hover */}
+                    <button
+                      onClick={(e) => handleDeleteSession(e, s.id)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-all duration-150 opacity-0 group-hover:opacity-100"
+                      style={{
+                        color: "var(--parchment-muted)",
+                        background: "transparent",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = "#ef4444";
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = "var(--parchment-muted)";
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                      aria-label={`Delete chat: ${s.title}`}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <svg
+                          width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -260,9 +340,17 @@ export default function Sidebar({
         >
           {/* Home link */}
           <Link
-            href="/"
-            className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            href="/?home=true"
+            className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
             style={{ color: "var(--parchment-muted)", fontFamily: "var(--font-typewriter)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--onyx-soft)";
+              e.currentTarget.style.color = "var(--foreground)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "var(--parchment-muted)";
+            }}
           >
             {/* Home SVG */}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -309,8 +397,16 @@ export default function Sidebar({
               </div>
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="p-1.5 rounded-lg transition-colors flex-shrink-0"
+                className="p-1.5 rounded-lg transition-all duration-200 flex-shrink-0"
                 style={{ color: "var(--parchment-muted)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#ef4444";
+                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--parchment-muted)";
+                  e.currentTarget.style.background = "transparent";
+                }}
                 aria-label="Sign out"
               >
                 {/* Logout SVG */}

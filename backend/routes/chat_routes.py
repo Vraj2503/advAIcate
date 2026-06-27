@@ -33,6 +33,8 @@ def init_chat_routes(groq_client, limiter):
 
     limiter.limit(RATE_LIMIT_CHAT)(chat)
     limiter.limit(RATE_LIMIT_SESSION_END)(end_session)
+    limiter.limit(RATE_LIMIT_SESSION_END)(delete_session)
+    limiter.limit(RATE_LIMIT_SESSION_END)(rename_session)
     limiter.limit(RATE_LIMIT_SESSIONS_LIST)(get_sessions)
 
 
@@ -60,6 +62,11 @@ def session_end_preflight():
 
 @chat_bp.route("/api/sessions/<session_id>/messages", methods=["OPTIONS"])
 def session_messages_preflight(session_id):
+    return ("", 204)
+
+
+@chat_bp.route("/api/sessions/<session_id>", methods=["OPTIONS"])
+def session_delete_preflight(session_id):
     return ("", 204)
 
 
@@ -191,6 +198,66 @@ def get_session_messages(session_id):
         )
         return _safe_error(
             "Failed to load conversation history",
+            str(e),
+            500
+        )
+
+
+@chat_bp.route("/api/sessions/<session_id>", methods=["DELETE"])
+@require_auth
+def delete_session(session_id):
+    """Permanently delete a chat session and all related data."""
+    try:
+        user_id = request.user["id"]
+
+        session, error = enforce_session_ownership(
+            session_id, user_id, _session_mgr
+        )
+        if error:
+            return error
+
+        _session_mgr.delete_session(session_id)
+        return jsonify({"success": True, "message": "Session deleted"}), 200
+
+    except Exception as e:
+        logger.error(f"Failed to delete session {session_id}: {e}")
+        return _safe_error(
+            "Failed to delete session",
+            str(e),
+            500
+        )
+
+
+@chat_bp.route("/api/sessions/<session_id>", methods=["PATCH"])
+@require_auth
+def rename_session(session_id):
+    """Rename a chat session."""
+    try:
+        user_id = request.user["id"]
+        data = request.get_json()
+        
+        if not data or not data.get("title"):
+            return jsonify({"error": "Title is required"}), 400
+            
+        new_title = data.get("title").strip()
+
+        session, error = enforce_session_ownership(
+            session_id, user_id, _session_mgr
+        )
+        if error:
+            return error
+
+        updated_session = _session_mgr.update_session(session_id, title=new_title)
+        
+        if not updated_session:
+            return _safe_error("Failed to update session title", status_code=500)
+            
+        return jsonify({"success": True, "session": updated_session}), 200
+
+    except Exception as e:
+        logger.error(f"Failed to rename session {session_id}: {e}")
+        return _safe_error(
+            "Failed to rename session",
             str(e),
             500
         )
