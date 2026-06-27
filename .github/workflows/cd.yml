@@ -3,78 +3,67 @@ name: Continuous Deployment
 on:
   push:
     branches: [ "main" ]
-    # Only run CD if CI passed (implicit if you require status checks, but we keep it simple here)
 
 env:
-  REGISTRY: ghcr.io
-  FRONTEND_IMAGE_NAME: ${{ github.repository }}-frontend
-  BACKEND_IMAGE_NAME: ${{ github.repository }}-backend
+  # GCP Configuration
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  # Artifact Registry Repository (e.g., us-central1-docker.pkg.dev/project/repo)
+  ARTIFACT_REGISTRY_REPO: ${{ secrets.ARTIFACT_REGISTRY_REPO }}
+  BACKEND_IMAGE_NAME: advaicate-backend
+  SERVICE_NAME: advaicate-backend
 
 jobs:
-  build-and-push-images:
+  deploy-backend:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      id-token: write # Required for Workload Identity Federation
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Log in to the Container registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Fetch offline embedding model
+      run: python scripts/fetch_model.py
 
-    - name: Build and push Frontend image
-      uses: docker/build-push-action@v5
+    # Recommended: Authenticate via Workload Identity Federation
+    - name: Authenticate to GCP (WIF)
+      uses: google-github-actions/auth@v2
+      if: ${{ secrets.GCP_WIF_PROVIDER != '' }}
       with:
-        context: ./frontend
-        push: true
-        tags: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest,${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+        workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+        service_account: ${{ secrets.GCP_WIF_SA_EMAIL }}
+
+    # Fallback: Authenticate via Service Account JSON Key
+    # Ensure this SA is strictly scoped to:
+    # roles/run.developer, roles/iam.serviceAccountUser, roles/artifactregistry.writer
+    - name: Authenticate to GCP (JSON Key Fallback)
+      uses: google-github-actions/auth@v2
+      if: ${{ secrets.GCP_WIF_PROVIDER == '' }}
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker for Artifact Registry
+      run: |
+        gcloud auth configure-docker $(echo ${{ env.ARTIFACT_REGISTRY_REPO }} | cut -d'/' -f1)
 
     - name: Build and push Backend image
       uses: docker/build-push-action@v5
       with:
         context: ./backend
         push: true
-        tags: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest,${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+        tags: |
+          ${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          ${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
 
-  # Placeholder job for deploying to Kubernetes
-  # This requires a KUBECONFIG secret stored in GitHub Actions
-  deploy-to-k8s:
-    needs: build-and-push-images
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v3
-
-    - name: Deploy to Kubernetes
-      env:
-        KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
+    - name: Deploy to Cloud Run
       run: |
-        echo "$KUBECONFIG_CONTENT" > kubeconfig.yaml
-        export KUBECONFIG=kubeconfig.yaml
-        
-        # Deploy Secrets (make sure secrets.yaml exists and is configured)
-        # kubectl apply -f k8s/secrets.yaml
-        
-        # Deploy Services
-        kubectl apply -f k8s/frontend-service.yaml
-        kubectl apply -f k8s/backend-service.yaml
-        
-        # Deploy Deployments
-        # Update image tags to the newly built SHA
-        sed -i 's|image: .*frontend:latest|image: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}|' k8s/frontend-deployment.yaml
-        sed -i 's|image: .*backend:latest|image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}|' k8s/backend-deployment.yaml
-        
-        kubectl apply -f k8s/frontend-deployment.yaml
-        kubectl apply -f k8s/backend-deployment.yaml
-        
-        # Deploy Ingress
-        kubectl apply -f k8s/ingress.yaml
+        chmod +x deploy/cloudrun/deploy.sh
+        ./deploy/cloudrun/deploy.sh \
+          ${{ env.GCP_PROJECT_ID }} \
+          ${{ env.GCP_REGION }} \
+          ${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}

@@ -48,7 +48,7 @@ export default function Sidebar({
     isFetchingRef.current = true;
     setIsLoadingSessions(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = ""; // Uses Next.js rewrites proxy
       const response = await apiFetch(`${apiUrl}/api/sessions`);
       const data = await response.json();
 
@@ -77,7 +77,7 @@ export default function Sidebar({
 
     setDeletingSessionId(sessionId);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = ""; // Uses Next.js rewrites proxy
       const response = await apiFetch(`${apiUrl}/api/sessions/${sessionId}`, {
         method: "DELETE",
       });

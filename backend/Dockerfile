@@ -27,16 +27,20 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/opt/venv/bin:$PATH"
+    PATH="/opt/venv/bin:$PATH" \
+    TRANSFORMERS_OFFLINE=1 \
+    HF_HUB_OFFLINE=1 \
+    EMBEDDING_MODEL_PATH="/app/models/bge-small-en-v1.5"
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy application code
-COPY . .
-
 # Run as non-root user for security
 RUN addgroup --system appgroup && adduser --system --group appuser
+
+# Copy application code (including the fetched models/ directory)
+COPY --chown=appuser:appgroup . .
+
 USER appuser
 
 EXPOSE 8000

@@ -90,9 +90,11 @@ DOCX_COMPRESSION_RATIO_LIMIT = int(os.getenv("DOCX_COMPRESSION_RATIO_LIMIT", "10
 # EMBEDDING
 # ======================
 
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5")
+TRANSFORMERS_OFFLINE = os.getenv("TRANSFORMERS_OFFLINE", "0") == "1"
+EMBEDDING_MODEL_PATH = os.getenv("EMBEDDING_MODEL_PATH", "/app/models/bge-small-en-v1.5")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
 EMBEDDING_MAX_LENGTH = int(os.getenv("EMBEDDING_MAX_LENGTH", "512"))
-EMBEDDING_DEFAULT_DIM = int(os.getenv("EMBEDDING_DEFAULT_DIM", "768"))
+EMBEDDING_DEFAULT_DIM = int(os.getenv("EMBEDDING_DEFAULT_DIM", "384"))
 
 # ======================
 # RAG PIPELINE
@@ -121,11 +123,10 @@ RATE_LIMIT_SESSIONS_LIST = os.getenv("RATE_LIMIT_SESSIONS_LIST", "60 per minute"
 # ======================
 # CORS
 # ======================
-
+# Note: At deploy time, the real apex domain must be set via the ALLOWED_ORIGINS environment variable (comma-separated).
 DEFAULT_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://advaicate.onrender.com",
 ]
 
 # ======================

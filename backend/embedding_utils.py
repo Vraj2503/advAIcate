@@ -9,7 +9,7 @@ from transformers import AutoTokenizer, AutoModel
 import numpy as np
 from typing import List, Union
 
-from config import EMBEDDING_MODEL, EMBEDDING_MAX_LENGTH, EMBEDDING_DEFAULT_DIM
+from config import EMBEDDING_MODEL, EMBEDDING_MAX_LENGTH, EMBEDDING_DEFAULT_DIM, TRANSFORMERS_OFFLINE, EMBEDDING_MODEL_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,10 @@ class EmbeddingGenerator:
     """Generate embeddings for text using transformers directly"""
     
     def __init__(self, model_name: str = None):
-        self.model_name = model_name or EMBEDDING_MODEL
+        if TRANSFORMERS_OFFLINE:
+            self.model_name = model_name or EMBEDDING_MODEL_PATH
+        else:
+            self.model_name = model_name or EMBEDDING_MODEL
         self.model = None
         self.tokenizer = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -29,13 +32,11 @@ class EmbeddingGenerator:
             logger.info("Loading embedding model '%s' on %s...", self.model_name, self.device)
 
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name,
-                use_auth_token=True
+                self.model_name
             )
 
             self.model = AutoModel.from_pretrained(
-                self.model_name,
-                use_auth_token=True
+                self.model_name
             )
 
             self.model.to(self.device)

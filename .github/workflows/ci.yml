@@ -50,9 +50,14 @@ jobs:
         # Install pytest if not already in requirements
         pip install pytest pytest-asyncio
         
-    - name: Run tests (if applicable)
+    - name: Fetch offline embedding model
+      run: python scripts/fetch_model.py
+        
+    - name: Run backend tests
       working-directory: ./backend
-      # Assuming you have tests in a 'tests' folder, otherwise this step will be a placeholder
+      env:
+        TRANSFORMERS_OFFLINE: "1"
+        HF_HUB_OFFLINE: "1"
       run: |
         echo "Running backend tests..."
-        # pytest tests/
+        pytest tests/
