@@ -9,7 +9,7 @@
 RAG_Pipeline/.env
 
 backend/evaluation/evaluation_results.json
-backend/__pycache__/
+__pycache__/
 backend/models/
 frontend/.next/
 frontend/node_modules/
