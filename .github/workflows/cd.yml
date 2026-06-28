@@ -5,65 +5,66 @@ on:
     branches: [ "main" ]
 
 env:
-  # GCP Configuration
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: ${{ secrets.GCP_REGION }}
-  # Artifact Registry Repository (e.g., us-central1-docker.pkg.dev/project/repo)
-  ARTIFACT_REGISTRY_REPO: ${{ secrets.ARTIFACT_REGISTRY_REPO }}
-  BACKEND_IMAGE_NAME: advaicate-backend
-  SERVICE_NAME: advaicate-backend
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-backend
 
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # Required for Workload Identity Federation
+      packages: write
+      id-token: write
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        
+    - name: Install dependencies for model fetch
+      run: pip install transformers torch
+
     - name: Fetch offline embedding model
       run: python scripts/fetch_model.py
 
-    # Recommended: Authenticate via Workload Identity Federation
-    - name: Authenticate to GCP (WIF)
-      uses: google-github-actions/auth@v2
-      if: ${{ secrets.GCP_WIF_PROVIDER != '' }}
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
       with:
-        workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-        service_account: ${{ secrets.GCP_WIF_SA_EMAIL }}
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    # Fallback: Authenticate via Service Account JSON Key
-    # Ensure this SA is strictly scoped to:
-    # roles/run.developer, roles/iam.serviceAccountUser, roles/artifactregistry.writer
-    - name: Authenticate to GCP (JSON Key Fallback)
-      uses: google-github-actions/auth@v2
-      if: ${{ secrets.GCP_WIF_PROVIDER == '' }}
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v5
       with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-
-    - name: Configure Docker for Artifact Registry
-      run: |
-        gcloud auth configure-docker $(echo ${{ env.ARTIFACT_REGISTRY_REPO }} | cut -d'/' -f1)
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=sha,format=long
 
     - name: Build and push Backend image
       uses: docker/build-push-action@v5
       with:
         context: ./backend
         push: true
-        tags: |
-          ${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:latest
-          ${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
 
-    - name: Deploy to Cloud Run
-      run: |
-        chmod +x deploy/cloudrun/deploy.sh
-        ./deploy/cloudrun/deploy.sh \
-          ${{ env.GCP_PROJECT_ID }} \
-          ${{ env.GCP_REGION }} \
-          ${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Deploy to Azure Container Apps
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az containerapp update \
+            --name ${{ secrets.AZURE_CONTAINER_APP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --image ${{ steps.meta.outputs.tags }}
