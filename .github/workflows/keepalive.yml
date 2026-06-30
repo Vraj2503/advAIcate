@@ -1,0 +1,22 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Run twice a week at midnight UTC to prevent Supabase 7-day pause.
+    # The /health endpoint performs a cheap DB query to keep it active.
+    - cron: '0 0 * * 1,4'
+  workflow_dispatch: # Allow manual triggering for testing
+
+jobs:
+  ping-health:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Ping Backend Health Endpoint
+      run: |
+        if [ -z "${{ secrets.BACKEND_PROD_URL }}" ]; then
+          echo "BACKEND_PROD_URL secret is not set. Keep-alive skipped."
+          exit 0
+        fi
+        echo "Pinging ${{ secrets.BACKEND_PROD_URL }}/health to keep Supabase active..."
+        curl -f -s "${{ secrets.BACKEND_PROD_URL }}/health"
+        echo "Ping successful."

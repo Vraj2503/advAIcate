@@ -2,6 +2,14 @@
 .env
 .env.*
 *.env
+!.env.example
+*.sql
 
 # Legacy path (kept for safety)
 RAG_Pipeline/.env
+
+backend/evaluation/evaluation_results.json
+__pycache__/
+backend/models/
+frontend/.next/
+frontend/node_modules/
