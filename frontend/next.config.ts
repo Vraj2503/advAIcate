@@ -21,16 +21,16 @@ const nextConfig: NextConfig = {
   experimental: {
     // optimizeCss requires 'critters' package — disabled
   },
-  async rewrites() {
+    async rewrites() {
     return [
       {
-        source: '/api/:path*',
-        // NEXT_PUBLIC_API_URL is the Cloud Run URL (e.g. https://advaicate-backend-xxxxx.run.app)
-        // This proxies frontend API calls securely, avoiding cross-origin issues
+        // The regex ((?!auth).*) ensures anything starting with /api/auth is ignored by this proxy rule
+        source: '/api/:path((?!auth).*)',
         destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/:path*`,
       },
     ];
   },
+
 };
 
 export default nextConfig;
