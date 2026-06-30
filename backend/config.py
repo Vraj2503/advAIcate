@@ -125,7 +125,7 @@ RATE_LIMIT_SESSIONS_LIST = os.getenv("RATE_LIMIT_SESSIONS_LIST", "60 per minute"
 # ======================
 # Note: At deploy time, the real apex domain must be set via the ALLOWED_ORIGINS environment variable (comma-separated).
 DEFAULT_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "https://advaicate.vercel.app",
     "http://127.0.0.1:3000",
 ]
 
