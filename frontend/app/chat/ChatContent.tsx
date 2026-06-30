@@ -66,7 +66,7 @@ const Chat = () => {
     if (files.length === 0) return true;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://advaicate-api.calmocean-d5c8f374.centralindia.azurecontainerapps.io";
 
       for (const file of files) {
         const formData = new FormData();
@@ -148,7 +148,7 @@ const Chat = () => {
 
     try {
       const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        process.env.NEXT_PUBLIC_API_URL || "https://advaicate-api.calmocean-d5c8f374.centralindia.azurecontainerapps.io";
 
       const response = await apiFetch(`${apiUrl}/api/chat`, {
         method: "POST",
@@ -272,7 +272,7 @@ const Chat = () => {
 
     // Load messages for this session from the backend
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://advaicate-api.calmocean-d5c8f374.centralindia.azurecontainerapps.io";
       const response = await apiFetch(`${apiUrl}/api/sessions/${selectedSessionId}/messages`);
       const data = await response.json();
 
@@ -322,7 +322,7 @@ const Chat = () => {
 
     setIsRenaming(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://advaicate-api.calmocean-d5c8f374.centralindia.azurecontainerapps.io";
       const response = await apiFetch(`${apiUrl}/api/sessions/${sessionId}`, {
         method: "PATCH",
         body: JSON.stringify({ title: trimmed }),
