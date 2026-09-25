@@ -162,18 +162,22 @@ async def unexpected_error_handler(request: Request, exc: Exception):
 
 @app.get("/health")
 async def health():
+    database = "error"
     try:
         from supabase_client import get_supabase_manager
         db = get_supabase_manager()
         if db and db.client:
             # Trivial cheap query to keep Supabase project active
             db.client.table("chat_sessions").select("id").limit(1).execute()
+            database = "ok"
+        else:
+            database = "unavailable"
     except Exception as e:
         logger.warning("Supabase keep-alive in health check failed: %s", e)
-        # Do not fail liveness probe on DB blip
-        pass
-    
-    return {"status": "ok"}
+        # Do not fail liveness probe on DB blip, but report it in the body so
+        # the keep-alive cron can tell a real ping from a swallowed failure.
+
+    return {"status": "ok", "database": database}
 
 
 @app.get("/ready")

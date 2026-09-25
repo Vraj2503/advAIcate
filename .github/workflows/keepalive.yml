@@ -2,21 +2,75 @@ name: Supabase Keep-Alive
 
 on:
   schedule:
-    # Run twice a week at midnight UTC to prevent Supabase 7-day pause.
-    # The /health endpoint performs a cheap DB query to keep it active.
+    # Twice a week (Mon/Thu 00:00 UTC). Supabase pauses free projects after
+    # 7 days of inactivity, so the largest gap here is 4 days.
     - cron: '0 0 * * 1,4'
   workflow_dispatch: # Allow manual triggering for testing
 
+permissions:
+  contents: write
+
 jobs:
-  ping-health:
+  keep-alive:
     runs-on: ubuntu-latest
     steps:
-    - name: Ping Backend Health Endpoint
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Talk to Supabase directly. Going through the backend meant a sleeping or
+    # redeployed app silently broke the keep-alive.
+    - name: Query Supabase
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       run: |
-        if [ -z "${{ secrets.BACKEND_PROD_URL }}" ]; then
-          echo "BACKEND_PROD_URL secret is not set. Keep-alive skipped."
+        set -euo pipefail
+        if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+          echo "::error::SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY repository secrets are not set."
+          exit 1
+        fi
+        code=$(curl -sS -o /tmp/supabase.json -w '%{http_code}' \
+          --retry 3 --retry-all-errors --retry-delay 10 --max-time 30 \
+          -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+          -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+          "${SUPABASE_URL%/}/rest/v1/chat_sessions?select=id&limit=1")
+        if [ "$code" != "200" ]; then
+          echo "::error::Supabase query failed with HTTP $code"
+          cat /tmp/supabase.json
+          exit 1
+        fi
+        echo "Supabase responded 200 — project kept active."
+
+    # Secondary: warms the Azure container. Never fails the job, because a cold
+    # backend must not mask a successful Supabase ping.
+    - name: Ping backend (optional)
+      continue-on-error: true
+      env:
+        BACKEND_PROD_URL: ${{ secrets.BACKEND_PROD_URL }}
+      run: |
+        set -uo pipefail
+        if [ -z "$BACKEND_PROD_URL" ]; then
+          echo "::warning::BACKEND_PROD_URL not set — skipping backend warm-up."
           exit 0
         fi
-        echo "Pinging ${{ secrets.BACKEND_PROD_URL }}/health to keep Supabase active..."
-        curl -f -s "${{ secrets.BACKEND_PROD_URL }}/health"
-        echo "Ping successful."
+        body=$(curl -sS --retry 3 --retry-all-errors --retry-delay 10 --max-time 60 \
+          "${BACKEND_PROD_URL%/}/health") || {
+            echo "::warning::Backend did not respond."; exit 0; }
+        echo "$body"
+        case "$body" in
+          *'"database":"ok"'*|*'"database": "ok"'*) echo "Backend reached Supabase." ;;
+          *) echo "::warning::Backend is up but its Supabase check did not report ok." ;;
+        esac
+
+    # GitHub disables scheduled workflows after 60 days of repository
+    # inactivity. A dormant repo therefore kills its own keep-alive; this
+    # heartbeat commit resets that clock.
+    - name: Heartbeat commit
+      run: |
+        set -euo pipefail
+        date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/last-keepalive
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add .github/last-keepalive
+        git diff --quiet --cached || git commit -m "chore: keep-alive heartbeat [skip ci]"
+        git push

@@ -16,7 +16,11 @@ client = TestClient(app)
 def test_health_returns_200():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    body = response.json()
+    assert body["status"] == "ok"
+    # Reported so the keep-alive cron can distinguish a real DB ping
+    # from a swallowed failure.
+    assert "database" in body
 
 @patch("main.get_embedding_generator")
 @patch("main.get_supabase_manager")

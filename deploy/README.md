@@ -47,6 +47,24 @@ To run the CD workflow (`.github/workflows/cd.yml`), configure these GitHub Secr
 - `GCP_WIF_SA_EMAIL` (if using WIF)
 - `GCP_SA_KEY` (if using JSON fallback)
 - `ARTIFACT_REGISTRY_REPO` (e.g., `us-central1-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO_NAME`)
-- `BACKEND_PROD_URL` (Required for Supabase keep-alive cron, e.g., `https://advaicate-backend-xxxxx.run.app`)
+- `BACKEND_PROD_URL` (Optional; the deployed backend's base URL. The keep-alive job warms it but no longer depends on it.)
 
 Note: The ~120MB backend image stored in Artifact Registry incurs a negligible storage cost (~$0.10/mo), which fits within the $0/mo cost target logic.
+
+## Supabase Keep-Alive
+
+`.github/workflows/keepalive.yml` runs Mon/Thu at 00:00 UTC and issues a cheap
+`chat_sessions` read straight against the Supabase REST API, which resets the
+7-day free-tier pause timer. It requires these repository secrets:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Two failure modes to be aware of:
+
+1. **GitHub disables scheduled workflows after 60 days of repository
+   inactivity**, and it does not re-enable them on the next push — you must
+   click *Enable workflow* on the Actions tab. The job's heartbeat commit
+   (`.github/last-keepalive`) keeps the repo active so this stops recurring.
+2. The job fails loudly if the Supabase secrets are missing. It used to
+   `exit 0`, which produced a green run while nothing was pinged.
