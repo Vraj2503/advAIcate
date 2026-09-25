@@ -13,3 +13,9 @@ __pycache__/
 backend/models/
 frontend/.next/
 frontend/node_modules/
+
+# Virtualenvs
+test_venv/
+venv/
+.venv/
+env/
