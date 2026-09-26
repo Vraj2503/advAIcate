@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     # Talk to Supabase directly. Going through the backend meant a sleeping or
     # redeployed app silently broke the keep-alive.
@@ -23,20 +23,38 @@ jobs:
       env:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        KEEPALIVE_TABLE: ${{ vars.KEEPALIVE_TABLE }}
       run: |
         set -euo pipefail
         if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
           echo "::error::SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY repository secrets are not set."
           exit 1
         fi
-        code=$(curl -sS -o /tmp/supabase.json -w '%{http_code}' \
-          --retry 3 --retry-all-errors --retry-delay 10 --max-time 30 \
-          -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-          -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-          "${SUPABASE_URL%/}/rest/v1/chat_sessions?select=id&limit=1")
+
+        # The dashboard shows both the project URL and the full REST endpoint,
+        # so accept either. Pasting the latter used to build /rest/v1/rest/v1/.
+        base="${SUPABASE_URL%/}"
+        base="${base%/rest/v1}"
+        base="${base%/}"
+
+        case "$base" in
+          *supabase.com/dashboard*)
+            echo "::error::SUPABASE_URL is a dashboard link. Use the API URL: https://<project-ref>.supabase.co"
+            exit 1 ;;
+        esac
+
+        table="${KEEPALIVE_TABLE:-chat_sessions}"
+        echo "Requesting /rest/v1/$table?select=id&limit=1"
+        code=$(curl -sS -o /tmp/supabase.json -w '%{http_code}'           --retry 3 --retry-all-errors --retry-delay 10 --max-time 30           -H "apikey: $SUPABASE_SERVICE_ROLE_KEY"           -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"           "$base/rest/v1/$table?select=id&limit=1")
+
         if [ "$code" != "200" ]; then
           echo "::error::Supabase query failed with HTTP $code"
-          cat /tmp/supabase.json
+          echo "Response body:"; cat /tmp/supabase.json; echo
+          case "$code" in
+            401|403) echo "Key rejected — check you copied service_role, not anon." ;;
+            404) echo "Table '$table' not found in the exposed schema, or the URL is not a Supabase REST endpoint." ;;
+            000) echo "No response at all — the project is likely paused." ;;
+          esac
           exit 1
         fi
         echo "Supabase responded 200 — project kept active."
