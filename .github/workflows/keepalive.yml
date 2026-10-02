@@ -2,28 +2,34 @@ name: Supabase Keep-Alive
 
 on:
   schedule:
-    # Twice a week (Mon/Thu 00:00 UTC). Supabase pauses free projects after
-    # 7 days of inactivity, so the largest gap here is 4 days.
-    - cron: '0 0 * * 1,4'
+    # Every 3 hours. Supabase pauses free projects that do not see
+    # "sufficient activity" over a 7-day window -- a volume threshold, not a
+    # single request, so two pings a week was far too thin. Offset off the
+    # hour because scheduled runs are most often delayed at :00.
+    - cron: '17 */3 * * *'
   workflow_dispatch: # Allow manual triggering for testing
 
 permissions:
   contents: write
 
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - name: Checkout repository
       uses: actions/checkout@v5
 
-    # Talk to Supabase directly. Going through the backend meant a sleeping or
-    # redeployed app silently broke the keep-alive.
     - name: Query Supabase
       env:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         KEEPALIVE_TABLE: ${{ vars.KEEPALIVE_TABLE }}
+        KEEPALIVE_WRITE_TABLE: ${{ vars.KEEPALIVE_WRITE_TABLE }}
       run: |
         set -euo pipefail
         if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
@@ -43,21 +49,48 @@ jobs:
             exit 1 ;;
         esac
 
+        auth=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+
         table="${KEEPALIVE_TABLE:-chat_sessions}"
-        echo "Requesting /rest/v1/$table?select=id&limit=1"
-        code=$(curl -sS -o /tmp/supabase.json -w '%{http_code}'           --retry 3 --retry-all-errors --retry-delay 10 --max-time 30           -H "apikey: $SUPABASE_SERVICE_ROLE_KEY"           -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"           "$base/rest/v1/$table?select=id&limit=1")
+        echo "Reading /rest/v1/$table"
+        code=$(curl -sS -o /tmp/read.json -w '%{http_code}'           --retry 3 --retry-all-errors --retry-delay 10 --max-time 30           "${auth[@]}" "$base/rest/v1/$table?select=id&limit=1")
 
         if [ "$code" != "200" ]; then
-          echo "::error::Supabase query failed with HTTP $code"
-          echo "Response body:"; cat /tmp/supabase.json; echo
+          echo "::error::Supabase read failed with HTTP $code"
+          echo "Response body:"; cat /tmp/read.json; echo
           case "$code" in
-            401|403) echo "Key rejected — check you copied service_role, not anon." ;;
+            401|403) echo "Key rejected -- check you copied service_role, not anon." ;;
             404) echo "Table '$table' not found in the exposed schema, or the URL is not a Supabase REST endpoint." ;;
-            000) echo "No response at all — the project is likely paused." ;;
+            000) echo "No response at all -- the project is likely paused." ;;
           esac
           exit 1
         fi
-        echo "Supabase responded 200 — project kept active."
+        echo "Read OK."
+
+        # A write produces WAL and real disk activity, which counts for more
+        # than a cached read. Opt-in: set the KEEPALIVE_WRITE_TABLE variable
+        # after creating the table (see deploy/README.md).
+        if [ -n "${KEEPALIVE_WRITE_TABLE:-}" ]; then
+          echo "Upserting into /rest/v1/$KEEPALIVE_WRITE_TABLE"
+          wcode=$(curl -sS -o /tmp/write.json -w '%{http_code}' \
+            --retry 2 --retry-all-errors --retry-delay 5 --max-time 30 \
+            "${auth[@]}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            -X POST \
+            -d "{\"id\":1,\"last_seen\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+            "$base/rest/v1/$KEEPALIVE_WRITE_TABLE")
+          case "$wcode" in
+            200|201|204) echo "Write OK." ;;
+            *) echo "::error::Supabase write failed with HTTP $wcode"
+               cat /tmp/write.json; echo
+               exit 1 ;;
+          esac
+        else
+          echo "KEEPALIVE_WRITE_TABLE not set -- read-only ping."
+        fi
+
+        echo "Supabase kept active."
 
     # Secondary: warms the Azure container. Never fails the job, because a cold
     # backend must not mask a successful Supabase ping.
@@ -68,11 +101,10 @@ jobs:
       run: |
         set -uo pipefail
         if [ -z "$BACKEND_PROD_URL" ]; then
-          echo "::warning::BACKEND_PROD_URL not set — skipping backend warm-up."
+          echo "::warning::BACKEND_PROD_URL not set -- skipping backend warm-up."
           exit 0
         fi
-        body=$(curl -sS --retry 3 --retry-all-errors --retry-delay 10 --max-time 60 \
-          "${BACKEND_PROD_URL%/}/health") || {
+        body=$(curl -sS --retry 3 --retry-all-errors --retry-delay 10 --max-time 60           "${BACKEND_PROD_URL%/}/health") || {
             echo "::warning::Backend did not respond."; exit 0; }
         echo "$body"
         case "$body" in
@@ -81,11 +113,20 @@ jobs:
         esac
 
     # GitHub disables scheduled workflows after 60 days of repository
-    # inactivity. A dormant repo therefore kills its own keep-alive; this
-    # heartbeat commit resets that clock.
+    # inactivity, so the schedule needs a commit now and then to stay alive.
+    # At one run every 3 hours that must NOT be every run, or the history
+    # fills with noise -- once every 10 days is plenty.
     - name: Heartbeat commit
       run: |
         set -euo pipefail
+        prev=$(cat .github/last-keepalive 2>/dev/null || echo "1970-01-01T00:00:00Z")
+        prev_s=$(date -u -d "$prev" +%s 2>/dev/null || echo 0)
+        age=$(( ( $(date -u +%s) - prev_s ) / 86400 ))
+        echo "Heartbeat is $age day(s) old."
+        if [ "$age" -lt 10 ]; then
+          echo "Fresh enough -- not committing."
+          exit 0
+        fi
         date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/last-keepalive
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

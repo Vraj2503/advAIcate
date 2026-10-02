@@ -53,12 +53,39 @@ Note: The ~120MB backend image stored in Artifact Registry incurs a negligible s
 
 ## Supabase Keep-Alive
 
-`.github/workflows/keepalive.yml` runs Mon/Thu at 00:00 UTC and issues a cheap
+`.github/workflows/keepalive.yml` runs every 3 hours and issues a cheap
 `chat_sessions` read straight against the Supabase REST API, which resets the
 7-day free-tier pause timer. It requires these repository secrets:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+
+### Why it runs every 3 hours
+
+Supabase pauses free projects that have "not seen **sufficient activity** for
+more than 7 days". That is a volume threshold, not a single request: this
+workflow originally ran twice a week, every run succeeded, and the project was
+still flagged for pausing on 2026-10-02. Frequency is the lever. Actions
+minutes are free on public repositories, so the job runs every 3 hours.
+
+### Optional write ping
+
+A read may be served without meaningful database work. A write produces WAL and
+real disk activity. To enable it, run this once in the Supabase SQL editor:
+
+```sql
+create table if not exists public.keepalive (
+  id        smallint primary key default 1,
+  last_seen timestamptz not null default now(),
+  constraint keepalive_single_row check (id = 1)
+);
+insert into public.keepalive (id) values (1) on conflict (id) do nothing;
+-- RLS on with no policies: only service_role can touch it.
+alter table public.keepalive enable row level security;
+```
+
+Then set the repository **variable** (not secret) `KEEPALIVE_WRITE_TABLE` to
+`keepalive`. Leave it unset to keep the ping read-only.
 
 Two failure modes to be aware of:
 
